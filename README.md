@@ -31,6 +31,8 @@ Un seul membre de l'équipe doit effectuer ces premières étapes :
 2. Clonez votre nouveau dépôt sur votre machine locale.
 3. Déposez réguliérement votre travail sur ce repo selon les bonnes pratiques git : [Clean Sheet git](https://training.github.com/downloads/fr/github-git-cheat-sheet.pdf)
 
+---
+
 ## 🌲 3. La structure du dépôt GitHub (Template)
 
 ```text
@@ -69,6 +71,8 @@ tic80 assets/game.tic -code src/main.fnl
 * **[Cheatsheet Fennel dans ce dépôt](./docs/cheatsheet_fennel.md)** : Pour comprendre les boucles, conditions et variables.
 * **[Wiki TIC-80 (API)](https://github.com/nesbox/TIC-80/wiki)** : Pour trouver comment dessiner (`spr`), afficher du texte (`print`), ou lire les inputs (`btn`).
 * **[Tutoriel officiel Fennel](https://fennel-lang.org/tutorial)** : Pour les plus curieux (M2 qui veulent pousser l'architecture fonctionnelle).
+
+---
 
 ## 🎯 6. Rendu Final :
 Vous avez jusqu'au 16 avril 2026 à XXh pour effectuer des commits sur vos repos personnels. Passé ce délai, si vous effectuez un commit, votre équipe peut être disqualifiée.
