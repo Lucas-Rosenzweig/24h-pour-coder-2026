@@ -7,7 +7,12 @@
    :y 68
    :size 8
    :speed 2
-   :color 12})
+   :color 12
+   ;; Si id = -1 vide
+   :id-sword-upgrades [0]
+   :id-spell-upgrades -1
+   :id-utility -1
+   })
 
 ;; -- Logique de deplacement --
 (fn player.update [p]
