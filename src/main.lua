@@ -137,7 +137,7 @@ package.preload["player"] = package.preload["player"] or function(...)
     end
   end
   player.new = function()
-    return {x = 120, y = 68, size = 8, speed = 2, color = 12, hp = 10, ["max-hp"] = 10, ["id-sword-upgrades"] = {0}, ["id-spell-upgrades"] = {id = nil, ["applied-upgrades"] = {}}, ["id-utility"] = -1, ["spell-cooldown"] = 0, ["sword-flash"] = 0, ["sword-hits-left"] = 0, ["sword-hit-due"] = false}
+    return {x = 120, y = 68, size = 8, speed = 2, color = 12, hp = 10, ["max-hp"] = 10, ["id-sword-upgrades"] = {0}, ["id-spell-upgrades"] = {id = nil, ["applied-upgrades"] = {}}, ["id-utility"] = -1, ["utility-cooldown"] = 0, ["i-frames"] = 0, ["spell-cooldown"] = 0, ["sword-flash"] = 0, ["sword-hits-left"] = 0, ["sword-hit-due"] = false}
   end
   player.update = function(p, world, enemies)
     local function hit_enemy_3f(nx, ny)
@@ -248,6 +248,14 @@ package.preload["player"] = package.preload["player"] or function(...)
     end
     if (p["spell-cooldown"] > 0) then
       p["spell-cooldown"] = (p["spell-cooldown"] - 1)
+    else
+    end
+    if (p["utility-cooldown"] > 0) then
+      p["utility-cooldown"] = (p["utility-cooldown"] - 1)
+    else
+    end
+    if (p["i-frames"] > 0) then
+      p["i-frames"] = (p["i-frames"] - 1)
       return nil
     else
       return nil
@@ -257,10 +265,14 @@ package.preload["player"] = package.preload["player"] or function(...)
     return spr(12, p.x, p.y, 0)
   end
   player["take-damage"] = function(p, dmg)
-    p.hp = (p.hp - dmg)
-    if (p.hp < 0) then
-      p.hp = 0
-      return nil
+    if (p["i-frames"] <= 0) then
+      p.hp = (p.hp - dmg)
+      if (p.hp < 0) then
+        p.hp = 0
+        return nil
+      else
+        return nil
+      end
     else
       return nil
     end
@@ -338,6 +350,30 @@ package.preload["player"] = package.preload["player"] or function(...)
             end
           end
         end
+      end
+    else
+      return nil
+    end
+  end
+  player["use-utility"] = function(p, world)
+    if ((p["id-utility"] ~= -1) and (p["utility-cooldown"] <= 0)) then
+      local util = abilities["get-utility"](p["id-utility"])
+      if (util.type == "active") then
+        if (p["id-utility"] == 1) then
+          local facing = (p["facing-angle"] or 0)
+          local dist = util.stats.distance
+          local nx = (p.x + (dist * math.cos(facing)))
+          local ny = (p.y + (dist * math.sin(facing)))
+          p.x = math.max(0, math.min(nx, (240 - p.size)))
+          p.y = math.max(20, math.min(ny, (136 - p.size)))
+          p["i-frames"] = util.stats["i-frames"]
+          p["utility-cooldown"] = util.stats.cooldown
+          return nil
+        else
+          return nil
+        end
+      else
+        return nil
       end
     else
       return nil
@@ -551,7 +587,7 @@ package.preload["abilities"] = package.preload["abilities"] or function(...)
       return nil
     end
   end
-  local utilities = {{name = "Dash", type = "active", desc = "Teleportation 32px dans la direction du mouvement", stats = {distance = 32, cooldown = 90, ["i-frames"] = 10}}, {name = "Bouclier d'epines", type = "passive", desc = "Renvoie 5 degats aux ennemis au contact", stats = {["reflect-damage"] = 5}}, {name = "Aimant a or", type = "passive", desc = "L'or est attire vers le joueur (rayon 40px)", stats = {["magnet-radius"] = 40}}}
+  local utilities = {{name = "Dash", type = "active", desc = "Teleportation 32px dans la direction du mouvement", stats = {distance = 32, cooldown = 90, ["i-frames"] = 10}}, {name = "Bouclier d'epines", type = "passive", desc = "Renvoie 5 degats aux ennemis quand ils frappent le joueur", stats = {["reflect-damage"] = 5}}}
   abilities["get-sword-upgrade"] = function(id)
     return sword_upgrades[id]
   end
@@ -639,21 +675,21 @@ package.preload["world"] = package.preload["world"] or function(...)
       local s1 = hex:sub(i, i)
       local s2 = hex:sub((i + 1), (i + 1))
       local p1
-      local _74_
+      local _80_
       if (s1 == "") then
-        _74_ = "0"
+        _80_ = "0"
       else
-        _74_ = s1
+        _80_ = s1
       end
-      p1 = tonumber(_74_, 16)
+      p1 = tonumber(_80_, 16)
       local p2
-      local _76_
+      local _82_
       if (s2 == "") then
-        _76_ = "0"
+        _82_ = "0"
       else
-        _76_ = s2
+        _82_ = s2
       end
-      p2 = tonumber(_76_, 16)
+      p2 = tonumber(_82_, 16)
       poke((addr + ((i - 1) // 2)), ((p2 * 16) + p1))
     end
     return nil
@@ -667,7 +703,7 @@ package.preload["world"] = package.preload["world"] or function(...)
     for num_ligne, ligne in ipairs(map1_v) do
       local new_ligne = {}
       for num_col, id in ipairs(ligne) do
-        local function _79_()
+        local function _85_()
           if (id == 99) then
             if (math.random(100) > 70) then
               return 5
@@ -678,7 +714,7 @@ package.preload["world"] = package.preload["world"] or function(...)
             return id
           end
         end
-        table.insert(new_ligne, _79_())
+        table.insert(new_ligne, _85_())
       end
       table.insert(map_v, new_ligne)
     end
@@ -788,6 +824,7 @@ local enemie
 package.preload["enemie"] = package.preload["enemie"] or function(...)
   local enemie = {}
   local astar = require("astar")
+  local abilities = require("abilities")
   enemie.new = function(x, y)
     return {x = x, y = y, size = 8, speed = 0.5, color = 8, hp = 3, ["attack-timer"] = 0, ["stun-timer"] = 0, ["dot-timer"] = 0, ["dot-dmg"] = 0, ["dot-tick"] = 0}
   end
@@ -826,7 +863,7 @@ package.preload["enemie"] = package.preload["enemie"] or function(...)
       e["path-timer"] = (e["path-timer"] - 1)
       if (e["path-timer"] <= 0) then
         local custom_wall_fn
-        local function _97_(px, py)
+        local function _103_(px, py)
           local is_wall = world["wall?"](px, py)
           if not is_wall then
             for _, other in ipairs(enemies) do
@@ -839,7 +876,7 @@ package.preload["enemie"] = package.preload["enemie"] or function(...)
           end
           return is_wall
         end
-        custom_wall_fn = _97_
+        custom_wall_fn = _103_
         e.path = astar["find-path"]((e.x + 4), (e.y + 4), (joueur.x + 4), (joueur.y + 4), custom_wall_fn)
         e["path-timer"] = (60 + math.random(0, 10))
       else
@@ -899,7 +936,12 @@ package.preload["enemie"] = package.preload["enemie"] or function(...)
     if (world["collide?"]((e.x - 1), (e.y - 1), (e.size + 2), joueur.x, joueur.y, joueur.size) and (e["attack-timer"] == 0)) then
       take_damage(joueur, 1)
       e["attack-timer"] = 30
-      return nil
+      if (joueur["id-utility"] == 2) then
+        local util = abilities["get-utility"](2)
+        return enemie["take-damage"](e, util.stats["reflect-damage"])
+      else
+        return nil
+      end
     else
       return nil
     end
@@ -1096,6 +1138,10 @@ local function update_game()
   end
   if keyp(1) then
     player["spell-attack"](joueur, enemies, enemie, projectiles, lightning_flashes)
+  else
+  end
+  if keyp(26) then
+    player["use-utility"](joueur, world)
   else
   end
   for i, e in ipairs(enemies) do

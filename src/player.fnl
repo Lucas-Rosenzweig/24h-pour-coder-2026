@@ -19,6 +19,8 @@
    :id-sword-upgrades [0]
    :id-spell-upgrades {:id nil :applied-upgrades []}
    :id-utility -1
+   :utility-cooldown 0
+   :i-frames 0
    :spell-cooldown 0
    :sword-flash 0
    :sword-hits-left 0
@@ -75,7 +77,15 @@
 
   ;; Cooldown sort
   (when (> p.spell-cooldown 0)
-    (set p.spell-cooldown (- p.spell-cooldown 1))))
+    (set p.spell-cooldown (- p.spell-cooldown 1)))
+
+  ;; Cooldown utilitaire
+  (when (> p.utility-cooldown 0)
+    (set p.utility-cooldown (- p.utility-cooldown 1)))
+
+  ;; I-frames
+  (when (> p.i-frames 0)
+    (set p.i-frames (- p.i-frames 1))))
 
 
 ;; -- Dessin du sprite joueur (ID 12) --
@@ -83,11 +93,10 @@
   (spr 12 p.x p.y 0))
 
 (fn player.take-damage [p dmg]
-  (set p.hp (- p.hp dmg))
-  
-  ;; éviter hp négatif
-  (when (< p.hp 0)
-    (set p.hp 0)))
+  (when (<= p.i-frames 0)
+    (set p.hp (- p.hp dmg))
+    (when (< p.hp 0)
+      (set p.hp 0))))
 
 (fn player.draw-ui [p]
   ;; fond
@@ -154,6 +163,22 @@
           (table.insert p.id-spell-upgrades.applied-upgrades reward.id)
           (when (= reward.kind :utility)
             (set p.id-utility reward.id)))))))
+
+;; Dash (utilitaire actif, déclenché par Z)
+(fn player.use-utility [p world]
+  (when (and (not= p.id-utility -1) (<= p.utility-cooldown 0))
+    (let [util (abilities.get-utility p.id-utility)]
+      (when (= util.type :active)
+        (when (= p.id-utility 1)
+          (let [facing (or p.facing-angle 0)
+                dist util.stats.distance
+                nx (+ p.x (* dist (math.cos facing)))
+                ny (+ p.y (* dist (math.sin facing)))]
+            (set p.x (math.max 0 (math.min nx (- 240 p.size))))
+            (set p.y (math.max 20 (math.min ny (- 136 p.size))))
+            (set p.i-frames util.stats.i-frames)
+            (set p.utility-cooldown util.stats.cooldown)))))))
+
 
 ;; -- Debug : affiche le cône d'attaque --
 ;; -- Animation sweep épée --

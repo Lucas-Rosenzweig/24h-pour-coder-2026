@@ -76,6 +76,10 @@
   (when (keyp 1)
     (player.spell-attack joueur enemies enemie projectiles lightning-flashes))
 
+  ;; Utilitaire actif si touche Z appuyée (keyp 26)
+  (when (keyp 26)
+    (player.use-utility joueur world))
+
   (each [i e (ipairs enemies)]
     (enemie.update e joueur world enemies)
     (enemie.attack e joueur player.take-damage world)

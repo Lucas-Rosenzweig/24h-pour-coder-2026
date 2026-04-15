@@ -1,5 +1,6 @@
 (local enemie {})
 (local astar (include :astar))
+(local abilities (include :abilities))
 ;; =========================
 ;; Création d'un ennemi
 ;; =========================
@@ -139,9 +140,12 @@
   ;; On "gonfle" la hitbox de 1 pixel de chaque côté pour détecter le contact (puisqu'ils ne se superposent plus)
   (when (and (world.collide? (- e.x 1) (- e.y 1) (+ e.size 2) joueur.x joueur.y joueur.size)
              (= e.attack-timer 0))
-    
     (take-damage joueur 1)
-    (set e.attack-timer 30))) ;; cooldown (~0.5s)
+    (set e.attack-timer 30) ;; cooldown (~0.5s)
+    ;; Bouclier d'épines : renvoie des dégâts au moment de l'impact
+    (when (= joueur.id-utility 2)
+      (let [util (abilities.get-utility 2)]
+        (enemie.take-damage e util.stats.reflect-damage)))))
 
 ;; =========================
 ;; Dégâts reçus

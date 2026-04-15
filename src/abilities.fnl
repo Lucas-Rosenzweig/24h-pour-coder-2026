@@ -97,13 +97,8 @@
 
    2 {:name "Bouclier d'epines"
       :type :passive
-      :desc "Renvoie 5 degats aux ennemis au contact"
-      :stats {:reflect-damage 5}}
-
-   3 {:name "Aimant a or"
-      :type :passive
-      :desc "L'or est attire vers le joueur (rayon 40px)"
-      :stats {:magnet-radius 40}}})
+      :desc "Renvoie 5 degats aux ennemis quand ils frappent le joueur"
+      :stats {:reflect-damage 5}}})
 
 ;; ============================================================
 ;; ACCESSEURS PUBLICS
