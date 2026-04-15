@@ -13,9 +13,9 @@
    :max-hp 10
    ;; Si id = -1 vide
    :id-sword-upgrades [0]
-   :id-spell-upgrades {:id nil :applied-upgrades []}
+   :id-spell-upgrades {:id nil :applied-upgrades [1 2]}
    :id-utility -1
-   })
+   :spell-cooldown 0})
 
 ;; -- Logique de déplacement avec collisions --
 (fn player.update [p world]
@@ -43,7 +43,11 @@
   (let [dx (if (btn 2) -1 (if (btn 3) 1 0))
         dy (if (btn 0) -1 (if (btn 1) 1 0))]
     (when (or (not= dx 0) (not= dy 0))
-      (set p.facing-angle (math.atan2 dy dx)))))
+      (set p.facing-angle (math.atan2 dy dx))))
+
+  ;; Cooldown sort
+  (when (> p.spell-cooldown 0)
+    (set p.spell-cooldown (- p.spell-cooldown 1))))
 
 
 ;; -- Dessin du sprite joueur (ID 20) --
@@ -113,5 +117,100 @@
             (when (<= norm-diff half-arc)
               (for [i 1 stats.hits]
                 (enemie.take-damage e stats.damage)))))))))
+
+;; Attaque de sort (ex: boule de feu, foudre)
+(fn player.spell-attack [p enemies enemie projectiles lightning-flashes]
+  (when (and (not= p.id-spell-upgrades.id nil)
+             (<= p.spell-cooldown 0))
+    (let [stats (abilities.compute-spell-stats p.id-spell-upgrades)
+          facing (or p.facing-angle 0)
+          cx (+ p.x (/ p.size 2))
+          cy (+ p.y (/ p.size 2))]
+      (set p.spell-cooldown stats.cooldown)
+
+      (if (= p.id-spell-upgrades.id 1)
+        ;; === BOULE DE FEU ===
+        (let [total stats.projectiles
+              spread-rad (* (or stats.spread 0) (/ math.pi 180))
+              start-angle (if (> total 1)
+                            (- facing (* spread-rad 0.5))
+                            facing)
+              step (if (> total 1)
+                     (/ spread-rad (- total 1))
+                     0)]
+          (for [i 0 (- total 1)]
+            (let [angle (+ start-angle (* i step))]
+              (table.insert projectiles
+                {:x cx :y cy
+                 :vx (* stats.speed (math.cos angle))
+                 :vy (* stats.speed (math.sin angle))
+                 :damage stats.damage
+                 :radius stats.radius
+                 :aoe (or stats.aoe 0)
+                 :dot (or stats.dot 0)
+                 :dot-dur (or stats.dot-dur 0)
+                 :alive true
+                 :lifetime 120}))))
+
+        ;; === FOUDRE ===
+        (do
+          (local range 80)
+          (var best-e nil)
+          (var best-dist 9999)
+          (each [_ e (ipairs enemies)]
+            (let [dx (- e.x cx)
+                  dy (- e.y cy)
+                  dist (math.sqrt (+ (* dx dx) (* dy dy)))]
+              (when (and (< dist range) (< dist best-dist))
+                (set best-e e)
+                (set best-dist dist))))
+          (when best-e
+            (enemie.take-damage best-e stats.damage)
+            (when (> stats.stun 0)
+              (enemie.apply-stun best-e stats.stun))
+            ;; Flash joueur → premier ennemi
+            (let [ex (+ best-e.x (/ best-e.size 2))
+                  ey (+ best-e.y (/ best-e.size 2))
+                  ddx (- ex cx) ddy (- ey cy)]
+              (table.insert lightning-flashes
+                {:x1 cx :y1 cy :x2 ex :y2 ey
+                 :jx (/ (- ddy) 4) :jy (/ ddx 4)
+                 :timer 8}))
+            (when (> stats.chain 0)
+              (local hit-set {})
+              (tset hit-set best-e true)
+              (var last-target best-e)
+              (var chains-left stats.chain)
+              (while (> chains-left 0)
+                (var next-e nil)
+                (var next-dist 9999)
+                (each [_ e (ipairs enemies)]
+                  (when (not (. hit-set e))
+                    (let [dx (- e.x last-target.x)
+                          dy (- e.y last-target.y)
+                          dist (math.sqrt (+ (* dx dx) (* dy dy)))]
+                      (when (and (< dist 40) (< dist next-dist))
+                        (set next-e e)
+                        (set next-dist dist)))))
+                (if next-e
+                  (do
+                    (enemie.take-damage next-e stats.damage)
+                    (when (> stats.stun 0)
+                      (enemie.apply-stun next-e stats.stun))
+                    ;; Flash ennemi → ennemi (chain)
+                    (let [lx (+ last-target.x (/ last-target.size 2))
+                          ly (+ last-target.y (/ last-target.size 2))
+                          nx (+ next-e.x (/ next-e.size 2))
+                          ny (+ next-e.y (/ next-e.size 2))
+                          ddx (- nx lx) ddy (- ny ly)]
+                      (table.insert lightning-flashes
+                        {:x1 lx :y1 ly :x2 nx :y2 ny
+                         :jx (/ (- ddy) 4) :jy (/ ddx 4)
+                         :timer 8}))
+                    (tset hit-set next-e true)
+                    (set last-target next-e)
+                    (set chains-left (- chains-left 1)))
+                  (set chains-left 0))))))))))
+
 player
 

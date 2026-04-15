@@ -47,7 +47,7 @@
 (local spells
   {1 {:name "Boule de feu"
       :desc "Projectile droit, degats de zone"
-      :base {:damage 15 :cooldown 40 :speed 3 :radius 8
+      :base {:damage 2 :cooldown 40 :speed 3 :radius 8
              :aoe 0 :dot 0 :dot-dur 0 :projectiles 1 :spread 0}
       :upgrades
         {1 {:name "Explosion"
@@ -62,7 +62,7 @@
 
    2 {:name "Foudre"
       :desc "Frappe instantanee, peut chainer entre ennemis"
-      :base {:damage 20 :cooldown 50 :chain 0 :stun 0}
+      :base {:damage 2 :cooldown 50 :chain 0 :stun 0}
       :upgrades
         {1 {:name "Chaine"
             :desc "Rebondit sur 2 ennemis proches"
