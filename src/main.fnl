@@ -36,7 +36,7 @@
     (table.remove enemies i)))
     
   ;; 3. Rendu
-  (cls 2) ;; Efface avec la couleur herbe (index 2 défini dans world)
+  (cls 0)
   (world.draw)
   (each [_ e (ipairs enemies)]
     (enemie.draw e))

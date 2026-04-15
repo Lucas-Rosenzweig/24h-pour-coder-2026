@@ -39,9 +39,9 @@
   (when (> p.y (- 136 p.size)) (set p.y (- 136 p.size))))
 
 
-;; -- Dessin du sprite joueur (ID 20) --
+;; -- Dessin du sprite joueur (ID 12) --
 (fn player.draw [p]
-  (spr 20 p.x p.y 0))
+  (spr 12 p.x p.y 0))
 
 (fn player.take-damage [p dmg]
   (set p.hp (- p.hp dmg))
