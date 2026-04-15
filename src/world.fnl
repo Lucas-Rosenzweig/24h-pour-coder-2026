@@ -144,7 +144,7 @@
     (let [col (+ (// x 8) 1) 
           lig (+ (// (- y 20) 8) 1)]
       (let [ligne (. matrice-active lig)
-            valeur (if ligne (. ligne col) 1)]
+            valeur (if ligne (or (. ligne col) 1) 1)]
         (= valeur 1)))))
 
 ;; Gestion centralisée de la collision pour un rectangle contre un mur

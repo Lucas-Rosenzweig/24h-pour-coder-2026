@@ -35,7 +35,22 @@
 
   ;; Recalculer le chemin complet toutes les 60 frames (~ 1 sec)
   (when (<= e.path-timer 0)
-    (set e.path (astar.find-path e.x e.y joueur.x joueur.y world.wall?))
+    
+    (local custom-wall-fn
+      (fn [px py]
+        (var is-wall (world.wall? px py))
+        ;; Si ce n'est pas un mur classique, on regarde s'il y a un autre ennemi sur cette case
+        (when (not is-wall)
+          (each [_ other (ipairs enemies)]
+            (when (and (not= other e)
+                       (>= px other.x) (<= px (+ other.x other.size))
+                       (>= py other.y) (<= py (+ other.y other.size)))
+              (set is-wall true))))
+        is-wall))
+
+    ;; On passe le CENTRE (+4) des entités pour éviter que le coin mathématique déborde sur un mur
+    (set e.path (astar.find-path (+ e.x 4) (+ e.y 4) (+ joueur.x 4) (+ joueur.y 4) custom-wall-fn))
+    
     ;; Ajout d'une petite variation aléatoire au timer pour désynchroniser les calculs des monstres
     (set e.path-timer (+ 60 (math.random 0 10))))
 
@@ -97,10 +112,8 @@
       (set e.y ny)
       (set moved true))
       
-    ;; Si l'ennemi voulait bouger mais s'est retrouvé bloqué (autre ennemi par ex),
-    ;; on force un recalcul immédiat du chemin pour l'aider à s'en sortir.
-    (when (and (not moved) (or (not= dx 0) (not= dy 0)))
-      (set e.path-timer 0)))
+    ;; (Le bloc de recalcul forcé a été retiré ici pour éviter de geler TIC-80 avec des appels A* en boucle)
+    )
 
   ;; cooldown attaque
   (when (> e.attack-timer 0)

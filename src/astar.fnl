@@ -35,7 +35,7 @@
           ;; Limite d'itérations pour ne pas freeze le jeu si bloqué
           (var iter 0)
 
-          (while (and (> (length open-set) 0) (not found) (< iter 200))
+          (while (and (> (length open-set) 0) (not found) (< iter 1000))
             (set iter (+ iter 1))
             
             ;; Trouver le nœud avec le plus petit f-score
@@ -83,15 +83,17 @@
                               (when (not in-open)
                                 (table.insert open-set [nx ny])))))))))))
 
-          ;; Reconstruction du chemin
+          ;; Reconstruction du chemin complet (incluant la case de départ pour l'alignement)
           (when found
             (var curr [target-x target-y])
-            (while (and curr (not (and (= (. curr 1) start-x) (= (. curr 2) start-y))))
+            (while curr
               ;; On ajoute au début de la liste
               (let [px (- (+ (* (- (. curr 1) 1) 8) 4) 4) ;; Position coin supérieur gauche (-4) pour compatibilité Spr
                     py (- (+ (* (- (. curr 2) 1) 8) 24) 4)]
                 (table.insert path 1 [px py]))
-              (set curr (. came-from (make-key (. curr 1) (. curr 2))))))
+              (if (and (= (. curr 1) start-x) (= (. curr 2) start-y))
+                  (set curr nil) ;; Termine la boucle
+                  (set curr (. came-from (make-key (. curr 1) (. curr 2)))))))
               
           path))))
 
