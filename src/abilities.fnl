@@ -112,15 +112,46 @@
 (fn abilities.get-sword-upgrade [id]
   (. sword-upgrades id))
 
+(fn abilities.get-all-sword-upgrade-ids []
+  (let [ids []]
+    (each [id _ (pairs sword-upgrades)]
+      (table.insert ids id))
+    ids))
+
 (fn abilities.get-spell [id]
   (. spells id))
+
+(fn abilities.get-all-spell-ids []
+  (let [ids []]
+    (each [id _ (pairs spells)]
+      (table.insert ids id))
+    ids))
 
 (fn abilities.get-utility [id]
   (. utilities id))
 
+(fn abilities.get-all-utility-ids []
+  (let [ids []]
+    (each [id _ (pairs utilities)]
+      (table.insert ids id))
+    ids))
+
 (fn abilities.get-spell-upgrade [spell-id sub-id]
   (let [spell (. spells spell-id)]
     (when spell (. spell.upgrades sub-id))))
+
+(fn abilities.get-available-spell-upgrade-ids [spell-state]
+  (if (= spell-state.id nil)
+    []
+    (let [ids []
+          def (. spells spell-state.id)
+          applied-set {}]
+      (each [_ sub-id (ipairs spell-state.applied-upgrades)]
+        (tset applied-set sub-id true))
+      (each [sub-id _ (pairs def.upgrades)]
+        (when (not (. applied-set sub-id))
+          (table.insert ids sub-id)))
+      ids)))
 
 ;; Retourne le nombre d'upgrades restantes pour le sort equipe
 (fn abilities.remaining-spell-upgrades [spell-state]

@@ -4,6 +4,7 @@
 ;; script: fennel
 
 ;; -- Module Principal --
+(local item (include :item))
 (local player (include :player))
 (local world (include :world))
 
@@ -13,39 +14,71 @@
 (local enemies [])
 (local projectiles [])
 (local lightning-flashes [])
+(local reward-screen (item.new))
+(local pickups [])
+(var pickup-spawn-timer 180)
+(local pickup-spawn-delay 300)
+(local max-pickups 3)
 
 (table.insert enemies (enemie.new 50 50))
 (table.insert enemies (enemie.new 180 100))
+(table.insert enemies (enemie.new 180 90))
+(table.insert enemies (enemie.new 180 120))
+
 ;; Initialisation du joueur
 (local joueur (player.new))
 
-;; Boucle principale
-(fn _G.TIC []
-  ;; 1. Initialisation unique au premier tour
-  (when (not initialized)
-    (world.init-assets)
-    (set initialized true))
+(fn player-overlap-item? [p pickup]
+  (and pickup.active
+       (< (math.abs (- p.x pickup.x)) pickup.size)
+       (< (math.abs (- p.y pickup.y)) pickup.size)))
 
-  ;; 2. Mise à jour (inputs + collisions gérées par world)
+(fn spawn-pickup []
+  (when (< (# pickups) max-pickups)
+    (var attempts 0)
+    (var spawned false)
+    (while (and (< attempts 20) (not spawned))
+      (let [x (* (math.random 1 28) 8)
+            y (+ 20 (* (math.random 1 13) 8))]
+        (set attempts (+ attempts 1))
+        (when (and (not (world.wall? x y))
+                   (not (world.wall? (+ x 7) (+ y 7))))
+          (table.insert pickups {:x x :y y :size 8 :active true})
+          (set spawned true))))))
+
+(fn update-game []
+  ;; Mise a jour (inputs + collisions gerees par world)
   (player.update joueur world)
 
-  ;; Attaque si touche E appuyée
+  ;; Spawn aleatoire de pickups avec limite a l'ecran
+  (set pickup-spawn-timer (- pickup-spawn-timer 1))
+  (when (<= pickup-spawn-timer 0)
+    (spawn-pickup)
+    (set pickup-spawn-timer pickup-spawn-delay))
+
+  ;; Ramassage des pickups
+  (for [i (# pickups) 1 -1]
+    (let [pickup (. pickups i)]
+      (when (player-overlap-item? joueur pickup)
+        (table.remove pickups i)
+        (item.open reward-screen joueur))))
+
+  ;; Attaque si touche E appuyee
   (when (keyp 5)
     (player.attack joueur enemies enemie))
 
-  ;; Sort si touche A appuyée (keyp 1)
+  ;; Sort si touche A appuyee
   (when (keyp 1)
     (player.spell-attack joueur enemies enemie projectiles lightning-flashes))
 
-  
   (each [i e (ipairs enemies)]
-  (enemie.update e joueur)
-  (enemie.attack e joueur player.take-damage)
-  ;; suppression si mort
-  (when (enemie.is-dead? e)
-    (table.remove enemies i)))
+    (enemie.update e joueur)
+    (enemie.attack e joueur player.take-damage)
+    ;; suppression si mort
+    (when (enemie.is-dead? e)
+      (table.remove enemies i)))
 
-  ;; Mise à jour des projectiles
+  ;; Mise a jour des projectiles
   (for [i (# projectiles) 1 -1]
     (let [proj (. projectiles i)]
       (set proj.x (+ proj.x proj.vx))
@@ -79,21 +112,24 @@
       (when (not proj.alive)
         (table.remove projectiles i))))
 
-  ;; Mise à jour des flashs éclair
+  ;; Mise a jour des flashs eclair
   (for [i (# lightning-flashes) 1 -1]
     (let [f (. lightning-flashes i)]
       (set f.timer (- f.timer 1))
       (when (<= f.timer 0)
-        (table.remove lightning-flashes i))))
+        (table.remove lightning-flashes i)))))
 
-  ;; 3. Rendu
-  (cls 2) ;; Efface avec la couleur herbe (index 2 défini dans world)
+(fn draw-game []
+  (cls 2)
   (world.draw)
   (each [_ e (ipairs enemies)]
     (enemie.draw e))
   (each [_ proj (ipairs projectiles)]
     (circ (math.floor proj.x) (math.floor proj.y) 3 6))
-  ;; Dessin des flashs éclair (zigzag en blanc)
+  (each [_ pickup (ipairs pickups)]
+    (circ (+ pickup.x 4) (+ pickup.y 4) 4 10)
+    (circ (+ pickup.x 4) (+ pickup.y 4) 2 12))
+  ;; Dessin des flashs eclair
   (each [_ f (ipairs lightning-flashes)]
     (let [mx (+ (/ (+ f.x1 f.x2) 2) f.jx)
           my (+ (/ (+ f.y1 f.y2) 2) f.jy)]
@@ -101,4 +137,20 @@
       (line mx my f.x2 f.y2 12)))
   (player.draw-ui joueur)
   (player.draw joueur))
-  ;;(player.draw-attack-cone joueur) ;; -- Debug : affiche le cône d'attaque --
+
+;; Boucle principale
+(fn _G.TIC []
+  ;; Initialisation unique
+  (when (not initialized)
+    (world.init-assets)
+    (set initialized true))
+
+  ;; Pause du jeu si l'ecran reward est ouvert
+  (if (item.is-open? reward-screen)
+    (item.update reward-screen joueur)
+    (update-game))
+
+  ;; Rendu
+  (draw-game)
+  (when (item.is-open? reward-screen)
+    (item.draw reward-screen)))

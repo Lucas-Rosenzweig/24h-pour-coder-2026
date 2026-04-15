@@ -2,6 +2,10 @@
 (local player {})
 (local abilities (include :abilities))
 
+(fn random-choice [xs]
+  (when (> (# xs) 0)
+    (. xs (math.random 1 (# xs)))))
+
 ;; -- Etat initial du joueur --
 (fn player.new []
   {:x 120
@@ -13,7 +17,7 @@
    :max-hp 10
    ;; Si id = -1 vide
    :id-sword-upgrades [0]
-   :id-spell-upgrades {:id nil :applied-upgrades [1 2]}
+   :id-spell-upgrades {:id nil :applied-upgrades []}
    :id-utility -1
    :spell-cooldown 0})
 
@@ -77,6 +81,55 @@
   ;; ne pas dépasser max
   (when (> p.hp p.max-hp)
     (set p.hp p.max-hp)))
+
+(fn player.get-random-reward [p]
+  (let [choices []
+        sword-id (random-choice (abilities.get-all-sword-upgrade-ids))
+        spell-id p.id-spell-upgrades.id
+        spell-upgrade-ids (abilities.get-available-spell-upgrade-ids p.id-spell-upgrades)
+        utility-ids []]
+    (when sword-id
+      (table.insert choices
+        {:kind :sword-upgrade
+         :id sword-id
+         :data (abilities.get-sword-upgrade sword-id)}))
+    (if (= spell-id nil)
+      (let [new-spell-id (random-choice (abilities.get-all-spell-ids))]
+        (when new-spell-id
+          (table.insert choices
+            {:kind :spell
+             :id new-spell-id
+             :data (abilities.get-spell new-spell-id)})))
+      (let [spell-upgrade-id (random-choice spell-upgrade-ids)]
+        (when spell-upgrade-id
+          (table.insert choices
+            {:kind :spell-upgrade
+             :spell-id spell-id
+             :id spell-upgrade-id
+             :data (abilities.get-spell-upgrade spell-id spell-upgrade-id)}))))
+    (each [_ id (ipairs (abilities.get-all-utility-ids))]
+      (when (not= id p.id-utility)
+        (table.insert utility-ids id)))
+    (let [utility-id (random-choice utility-ids)]
+      (when utility-id
+        (table.insert choices
+          {:kind :utility
+           :id utility-id
+           :data (abilities.get-utility utility-id)})))
+    (random-choice choices)))
+
+(fn player.apply-reward [p reward]
+  (when reward
+    (if (= reward.kind :sword-upgrade)
+      (table.insert p.id-sword-upgrades reward.id)
+      (if (= reward.kind :spell)
+        (do
+          (tset p.id-spell-upgrades :id reward.id)
+          (tset p.id-spell-upgrades :applied-upgrades []))
+        (if (= reward.kind :spell-upgrade)
+          (table.insert p.id-spell-upgrades.applied-upgrades reward.id)
+          (when (= reward.kind :utility)
+            (set p.id-utility reward.id)))))))
 
 ;; -- Debug : affiche le cône d'attaque --
 (fn player.draw-attack-cone [p]
