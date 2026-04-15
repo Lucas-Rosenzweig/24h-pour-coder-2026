@@ -24,16 +24,15 @@
     (world.init-assets)
     (set initialized true))
 
-  ;; 2. Mise à jour (inputs + collisions gérées par world)
-  (player.update joueur world)
+  ;; 2. Mise à jour des entités (inputs + collisions)
+  (player.update joueur world enemies)
 
-  
   (each [i e (ipairs enemies)]
-  (enemie.update e joueur)
-  (enemie.attack e joueur player.take-damage)
-  ;; suppression si mort
-  (when (enemie.is-dead? e)
-    (table.remove enemies i)))
+    (enemie.update e joueur world enemies)
+    (enemie.attack e joueur player.take-damage world)
+    ;; suppression si mort
+    (when (enemie.is-dead? e)
+      (table.remove enemies i)))
     
   ;; 3. Rendu
   (cls 2) ;; Efface avec la couleur herbe (index 2 défini dans world)

@@ -17,19 +17,31 @@
    })
 
 ;; -- Logique de déplacement avec collisions --
-(fn player.update [p world]
+(fn player.update [p world enemies]
+  
+  ;; Petite fonction locale pour vérifier si on tape un ennemi
+  (fn hit-enemy? [nx ny]
+    (var hit false)
+    (let [soft-size (- p.size 2)]
+      (each [_ e (ipairs enemies)]
+        (when (world.collide? (+ nx 1) (+ ny 1) soft-size e.x e.y e.size)
+          (set hit true))))
+    hit)
+
   ;; On teste le mouvement sur chaque axe indépendamment pour glisser contre les murs
   
   ;; Axe Y (Haut/Bas)
   (let [dy (if (btn 0) (- p.speed) (if (btn 1) p.speed 0))]
     (when (not= dy 0)
-      (if (world.can-move? p.x (+ p.y dy) p.size)
+      (if (and (world.can-move? p.x (+ p.y dy) p.size)
+               (not (hit-enemy? p.x (+ p.y dy))))
           (set p.y (+ p.y dy)))))
           
   ;; Axe X (Gauche/Droite)
   (let [dx (if (btn 2) (- p.speed) (if (btn 3) p.speed 0))]
     (when (not= dx 0)
-      (if (world.can-move? (+ p.x dx) p.y p.size)
+      (if (and (world.can-move? (+ p.x dx) p.y p.size)
+               (not (hit-enemy? (+ p.x dx) p.y)))
           (set p.x (+ p.x dx)))))
 
   ;; Limites de l'écran (Optionnel si la map est entourée de murs)

@@ -55,19 +55,26 @@
 
 ;; Vérifie si un pixel (x,y) est un obstacle
 (fn M.wall? [x y]
-  (if (< y 20) true ;; Zone réservée à l'UI
+  (if (or (< y 20) (< x 0) (> x 239) (> y 135)) true ;; Zone réservée à l'UI ou hors écran
     (let [col (+ (// x 8) 1) 
           lig (+ (// (- y 20) 8) 1)]
       (let [ligne (. map-v lig)
             valeur (if ligne (. ligne col) 2)]
         (or (= valeur 12) (= valeur 13))))))
 
-;; Gestion centralisée de la collision pour un rectangle (joueur)
+;; Gestion centralisée de la collision pour un rectangle contre un mur
 (fn M.can-move? [x y size]
   (not (or (M.wall? x y)
            (M.wall? (+ x (- size 1)) y)
            (M.wall? x (+ y (- size 1)))
            (M.wall? (+ x (- size 1)) (+ y (- size 1))))))
+
+;; Vérifie si deux entités se rentrent dedans (AABB)
+(fn M.collide? [x1 y1 s1 x2 y2 s2]
+  (and (< x1 (+ x2 s2))
+       (> (+ x1 s1) x2)
+       (< y1 (+ y2 s2))
+       (> (+ y1 s1) y2)))
 
 ;; Dessine toute la carte avec un décalage de 20px pour l'UI
 (fn M.draw []
@@ -76,3 +83,4 @@
       (spr id (* (- num-col 1) 8) (+ 20 (* (- num-ligne 1) 8)) 0))))
 
 M
+
