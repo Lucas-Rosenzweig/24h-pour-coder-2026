@@ -129,7 +129,7 @@
         (table.remove lightning-flashes i)))))
 
 (fn draw-game []
-  (cls 2)
+  (cls 0)
   (world.draw)
   (each [_ e (ipairs enemies)]
     (enemie.draw e))
