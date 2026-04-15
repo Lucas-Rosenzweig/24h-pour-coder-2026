@@ -9,6 +9,12 @@
 
 ;; Initialisation
 (var initialized false)
+(local enemie (include :enemie))
+(local enemies [])
+
+(table.insert enemies (enemie.new 50 50))
+(table.insert enemies (enemie.new 180 100))
+;; Initialisation du joueur
 (local joueur (player.new))
 
 ;; Boucle principale
@@ -21,8 +27,19 @@
   ;; 2. Mise à jour (inputs + collisions gérées par world)
   (player.update joueur world)
 
+  
+  (each [i e (ipairs enemies)]
+  (enemie.update e joueur)
+  (enemie.attack e joueur player.take-damage)
+  ;; suppression si mort
+  (when (enemie.is-dead? e)
+    (table.remove enemies i)))
+    
   ;; 3. Rendu
   (cls 2) ;; Efface avec la couleur herbe (index 2 défini dans world)
   (world.draw)
+  (each [_ e (ipairs enemies)]
+    (enemie.draw e))
+  (player.draw-ui joueur)
   (player.draw joueur))
 

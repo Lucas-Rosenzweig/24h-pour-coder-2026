@@ -7,7 +7,14 @@
    :y 68
    :size 8
    :speed 2
-   :color 12})
+   :color 12
+   :hp 10
+   :max-hp 10
+   ;; Si id = -1 vide
+   :id-sword-upgrades [0]
+   :id-spell-upgrades -1
+   :id-utility -1
+   })
 
 ;; -- Logique de déplacement avec collisions --
 (fn player.update [p world]
@@ -36,5 +43,28 @@
 (fn player.draw [p]
   (spr 20 p.x p.y 0))
 
+(fn player.take-damage [p dmg]
+  (set p.hp (- p.hp dmg))
+  
+  ;; éviter hp négatif
+  (when (< p.hp 0)
+    (set p.hp 0)))
+
+(fn player.draw-ui [p]
+  ;; fond
+  (rect 5 5 50 6 1)
+  
+  ;; vie actuelle
+  (rect 5 5 (* 50 (/ p.hp p.max-hp)) 6 11)
+  
+  ;; contour
+  (rectb 5 5 50 6 12))
+
+(fn player.heal [p amount]
+  (set p.hp (+ p.hp amount))
+  
+  ;; ne pas dépasser max
+  (when (> p.hp p.max-hp)
+    (set p.hp p.max-hp)))
 player
 
