@@ -210,10 +210,10 @@
     (let [col (+ (// x 8) 1)
           lig (+ (// (- y 16) 8) 1)]
       (let [ligne (. matrice-active lig)
-            valeur (if ligne (. ligne col) 1)]
+            valeur (if ligne (or (. ligne col) 1) 1)]
         (= valeur 1)))))
 
-;; Gestion centralisée de la collision pour un rectangle (joueur)
+;; Gestion centralisée de la collision pour un rectangle contre un mur
 (fn M.can-move? [x y size]
   (not (or (M.wall? x y)
            (M.wall? (+ x (- size 1)) y)
@@ -221,6 +221,14 @@
            (M.wall? (+ x (- size 1)) (+ y (- size 1))))))
 
 ;; Dessine toute la carte avec un décalage de 16px pour l'UI
+;; Vérifie si deux entités se rentrent dedans (AABB)
+(fn M.collide? [x1 y1 s1 x2 y2 s2]
+  (and (< x1 (+ x2 s2))
+       (> (+ x1 s1) x2)
+       (< y1 (+ y2 s2))
+       (> (+ y1 s1) y2)))
+
+;; Dessine toute la carte avec un décalage de 20px pour l'UI
 (fn M.draw []
   (each [num-ligne ligne (ipairs map-v)]
     (each [num-col id (ipairs ligne)]

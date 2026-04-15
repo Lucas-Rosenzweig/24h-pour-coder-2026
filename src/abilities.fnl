@@ -6,10 +6,10 @@
 ;; ============================================================
 
 (local SWORD-BASE
-  {:damage 10
-   :cooldown 20
+  {:damage 1
+   :cooldown 2
    :range 12
-   :arc 0 ;; Correspond a l'angle d'attaque en degres (0 = ligne droite), avec arc = 120, l'attaque couvre un cone de 120 degres devant le joueur
+   :arc 120 ;; Correspond a l'angle d'attaque en degres (0 = ligne droite), avec arc = 120, l'attaque couvre un cone de 120 degres devant le joueur
    :hits 1})
 
 ;; Types : :stat (stackable infini) | :behavior (rules specifiques)
@@ -47,7 +47,7 @@
 (local spells
   {1 {:name "Boule de feu"
       :desc "Projectile droit, degats de zone"
-      :base {:damage 15 :cooldown 40 :speed 3 :radius 8
+      :base {:damage 2 :cooldown 40 :speed 3 :radius 8
              :aoe 0 :dot 0 :dot-dur 0 :projectiles 1 :spread 0}
       :upgrades
         {1 {:name "Explosion"
@@ -62,7 +62,7 @@
 
    2 {:name "Foudre"
       :desc "Frappe instantanee, peut chainer entre ennemis"
-      :base {:damage 20 :cooldown 50 :chain 0 :stun 0}
+      :base {:damage 2 :cooldown 50 :chain 0 :stun 0}
       :upgrades
         {1 {:name "Chaine"
             :desc "Rebondit sur 2 ennemis proches"
@@ -72,18 +72,18 @@
             :effects {:stun 60}}}}})
 
 ;; Calcule les stats effectives du sort equipe
-;; spell-state : {:id N :applied-upgrades [...]} ou -1
+;; spell-state : {:id N :applied-upgrades [...]} ou {:id nil :applied-upgrades []}
 (fn abilities.compute-spell-stats [spell-state]
-  (when (= spell-state -1) (lua "return nil"))
-  (let [def (. spells spell-state.id)
-        stats {}]
-    (each [k v (pairs def.base)]
-      (tset stats k v))
-    (each [_ sub-id (ipairs spell-state.applied-upgrades)]
-      (let [upg (. def.upgrades sub-id)]
-        (each [k v (pairs upg.effects)]
-          (tset stats k (+ (or (. stats k) 0) v)))))
-    stats))
+  (when (not= spell-state.id nil)
+    (let [def (. spells spell-state.id)
+          stats {}]
+      (each [k v (pairs def.base)]
+        (tset stats k v))
+      (each [_ sub-id (ipairs spell-state.applied-upgrades)]
+        (let [upg (. def.upgrades sub-id)]
+          (each [k v (pairs upg.effects)]
+            (tset stats k (+ (or (. stats k) 0) v)))))
+      stats)))
 
 ;; ============================================================
 ;; UTILITAIRES -- 3 options, remplacement uniquement
@@ -97,13 +97,8 @@
 
    2 {:name "Bouclier d'epines"
       :type :passive
-      :desc "Renvoie 5 degats aux ennemis au contact"
-      :stats {:reflect-damage 5}}
-
-   3 {:name "Aimant a or"
-      :type :passive
-      :desc "L'or est attire vers le joueur (rayon 40px)"
-      :stats {:magnet-radius 40}}})
+      :desc "Renvoie 5 degats aux ennemis quand ils frappent le joueur"
+      :stats {:reflect-damage 5}}})
 
 ;; ============================================================
 ;; ACCESSEURS PUBLICS
@@ -112,22 +107,54 @@
 (fn abilities.get-sword-upgrade [id]
   (. sword-upgrades id))
 
+(fn abilities.get-all-sword-upgrade-ids []
+  (let [ids []]
+    (each [id _ (pairs sword-upgrades)]
+      (table.insert ids id))
+    ids))
+
 (fn abilities.get-spell [id]
   (. spells id))
 
+(fn abilities.get-all-spell-ids []
+  (let [ids []]
+    (each [id _ (pairs spells)]
+      (table.insert ids id))
+    ids))
+
 (fn abilities.get-utility [id]
   (. utilities id))
+
+(fn abilities.get-all-utility-ids []
+  (let [ids []]
+    (each [id _ (pairs utilities)]
+      (table.insert ids id))
+    ids))
 
 (fn abilities.get-spell-upgrade [spell-id sub-id]
   (let [spell (. spells spell-id)]
     (when spell (. spell.upgrades sub-id))))
 
+(fn abilities.get-available-spell-upgrade-ids [spell-state]
+  (if (= spell-state.id nil)
+    []
+    (let [ids []
+          def (. spells spell-state.id)
+          applied-set {}]
+      (each [_ sub-id (ipairs spell-state.applied-upgrades)]
+        (tset applied-set sub-id true))
+      (each [sub-id _ (pairs def.upgrades)]
+        (when (not (. applied-set sub-id))
+          (table.insert ids sub-id)))
+      ids)))
+
 ;; Retourne le nombre d'upgrades restantes pour le sort equipe
 (fn abilities.remaining-spell-upgrades [spell-state]
-  (when (= spell-state -1) (lua "return 0"))
-  (let [def (. spells spell-state.id)
-        total (accumulate [n 0 _ _ (pairs def.upgrades)] (+ n 1))
-        applied (# spell-state.applied-upgrades)]
-    (- total applied)))
+  (if (= spell-state.id nil)
+    0
+    (let [def (. spells spell-state.id)
+          total (accumulate [n 0 _ _ (pairs def.upgrades)] (+ n 1))
+          applied (# spell-state.applied-upgrades)]
+      (- total applied))))
 
 abilities
