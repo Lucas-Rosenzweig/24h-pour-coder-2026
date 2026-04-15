@@ -55,11 +55,12 @@
 
 ;; Vérifie si un pixel (x,y) est un obstacle
 (fn M.wall? [x y]
-  (let [col (+ (// x 8) 1) 
-        lig (+ (// y 8) 1)]
-    (let [ligne (. map-v lig)
-          valeur (if ligne (. ligne col) 2)]
-      (or (= valeur 12) (= valeur 13)))))
+  (if (< y 20) true ;; Zone réservée à l'UI
+    (let [col (+ (// x 8) 1) 
+          lig (+ (// (- y 20) 8) 1)]
+      (let [ligne (. map-v lig)
+            valeur (if ligne (. ligne col) 2)]
+        (or (= valeur 12) (= valeur 13))))))
 
 ;; Gestion centralisée de la collision pour un rectangle (joueur)
 (fn M.can-move? [x y size]
@@ -68,10 +69,10 @@
            (M.wall? x (+ y (- size 1)))
            (M.wall? (+ x (- size 1)) (+ y (- size 1))))))
 
-;; --- 5. RENDU ---
+;; Dessine toute la carte avec un décalage de 20px pour l'UI
 (fn M.draw []
   (each [num-ligne ligne (ipairs map-v)]
     (each [num-col id (ipairs ligne)]
-      (spr id (* (- num-col 1) 8) (* (- num-ligne 1) 8) 0))))
+      (spr id (* (- num-col 1) 8) (+ 20 (* (- num-ligne 1) 8)) 0))))
 
 M
