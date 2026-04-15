@@ -72,18 +72,18 @@
             :effects {:stun 60}}}}})
 
 ;; Calcule les stats effectives du sort equipe
-;; spell-state : {:id N :applied-upgrades [...]} ou -1
+;; spell-state : {:id N :applied-upgrades [...]} ou {:id nil :applied-upgrades []}
 (fn abilities.compute-spell-stats [spell-state]
-  (when (= spell-state -1) (lua "return nil"))
-  (let [def (. spells spell-state.id)
-        stats {}]
-    (each [k v (pairs def.base)]
-      (tset stats k v))
-    (each [_ sub-id (ipairs spell-state.applied-upgrades)]
-      (let [upg (. def.upgrades sub-id)]
-        (each [k v (pairs upg.effects)]
-          (tset stats k (+ (or (. stats k) 0) v)))))
-    stats))
+  (when (not= spell-state.id nil)
+    (let [def (. spells spell-state.id)
+          stats {}]
+      (each [k v (pairs def.base)]
+        (tset stats k v))
+      (each [_ sub-id (ipairs spell-state.applied-upgrades)]
+        (let [upg (. def.upgrades sub-id)]
+          (each [k v (pairs upg.effects)]
+            (tset stats k (+ (or (. stats k) 0) v)))))
+      stats)))
 
 ;; ============================================================
 ;; UTILITAIRES -- 3 options, remplacement uniquement
@@ -124,10 +124,11 @@
 
 ;; Retourne le nombre d'upgrades restantes pour le sort equipe
 (fn abilities.remaining-spell-upgrades [spell-state]
-  (when (= spell-state -1) (lua "return 0"))
-  (let [def (. spells spell-state.id)
-        total (accumulate [n 0 _ _ (pairs def.upgrades)] (+ n 1))
-        applied (# spell-state.applied-upgrades)]
-    (- total applied)))
+  (if (= spell-state.id nil)
+    0
+    (let [def (. spells spell-state.id)
+          total (accumulate [n 0 _ _ (pairs def.upgrades)] (+ n 1))
+          applied (# spell-state.applied-upgrades)]
+      (- total applied))))
 
 abilities

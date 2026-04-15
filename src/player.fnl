@@ -12,7 +12,7 @@
    :max-hp 10
    ;; Si id = -1 vide
    :id-sword-upgrades [0]
-   :id-spell-upgrades -1
+   :id-spell-upgrades {:id nil :applied-upgrades []}
    :id-utility -1
    })
 
