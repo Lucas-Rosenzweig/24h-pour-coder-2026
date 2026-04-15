@@ -4,7 +4,7 @@
 ;; -- Etat initial du joueur --
 (fn player.new []
   {:x 120
-   :y 68
+   :y 38
    :size 8
    :speed 2
    :color 12
