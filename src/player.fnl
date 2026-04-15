@@ -10,9 +10,6 @@
    :color 12
    :hp 10
    :max-hp 10
-   :attack-cooldown 0
-   :attack-timer 0
-   :attack-dir :right
    })
 
 ;; -- Logique de deplacement --
@@ -28,11 +25,6 @@
   (when (< p.y 20) (set p.y 20))
   (when (> p.x (- 240 p.size)) (set p.x (- 240 p.size)))
   (when (> p.y (- 136 p.size)) (set p.y (- 136 p.size))))
-
-  ;; bouton 4 = Z (attaque)
-(when (and (btnp 4) (= p.attack-cooldown 0))
-  (set p.attack-timer 10)      ;; durée de l'attaque
-  (set p.attack-cooldown 20)) ;; cooldown
 
 ;; -- Dessin --
 (fn player.draw [p]
@@ -61,6 +53,4 @@
   ;; ne pas dépasser max
   (when (> p.hp p.max-hp)
     (set p.hp p.max-hp)))
-
-
 player
