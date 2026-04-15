@@ -7,7 +7,13 @@
    :y 68
    :size 8
    :speed 2
-   :color 12})
+   :color 12
+   :hp 10
+   :max-hp 10
+   :attack-cooldown 0
+   :attack-timer 0
+   :attack-dir :right
+   })
 
 ;; -- Logique de deplacement --
 (fn player.update [p]
@@ -23,8 +29,38 @@
   (when (> p.x (- 240 p.size)) (set p.x (- 240 p.size)))
   (when (> p.y (- 136 p.size)) (set p.y (- 136 p.size))))
 
+  ;; bouton 4 = Z (attaque)
+(when (and (btnp 4) (= p.attack-cooldown 0))
+  (set p.attack-timer 10)      ;; durée de l'attaque
+  (set p.attack-cooldown 20)) ;; cooldown
+
 ;; -- Dessin --
 (fn player.draw [p]
   (rect p.x p.y p.size p.size p.color))
+
+(fn player.take-damage [p dmg]
+  (set p.hp (- p.hp dmg))
+  
+  ;; éviter hp négatif
+  (when (< p.hp 0)
+    (set p.hp 0)))
+
+(fn player.draw-ui [p]
+  ;; fond
+  (rect 5 5 50 6 1)
+  
+  ;; vie actuelle
+  (rect 5 5 (* 50 (/ p.hp p.max-hp)) 6 11)
+  
+  ;; contour
+  (rectb 5 5 50 6 12))
+
+(fn player.heal [p amount]
+  (set p.hp (+ p.hp amount))
+  
+  ;; ne pas dépasser max
+  (when (> p.hp p.max-hp)
+    (set p.hp p.max-hp)))
+
 
 player
