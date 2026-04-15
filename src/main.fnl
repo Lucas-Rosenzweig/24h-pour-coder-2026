@@ -1,24 +1,34 @@
-;; title:  Template de base
-;; author: Quentin
-;; desc:   Template de base pour le 24h pour coder 2026
+;; title:  Rogue-like 2D
+;; author: Equipe
+;; desc:   Rogue-like en vue du dessus
 ;; script: fennel
 
-(var couleur-texte 0)  ; 6 = vert. Essaie 11 (bleu clair)
-(var couleur-fond 12)  ; 12 = Blanc. Essaie 0 (Noir)
+;; Position du joueur
+(var px 120)
+(var py 68)
 
-;; Variable pour l'animation
-(var t 0)
+;; Taille du joueur
+(var size 8)
 
-;; Boucle principale exécutée à 60 FPS
+;; Vitesse de deplacement
+(var speed 2)
+
+;; Boucle principale a 60 FPS
 (fn _G.TIC []
-  ;; 1. Nettoie l'écran
-  (cls couleur-fond)
-  
-  ;; 2. Calcule un petit mouvement de vague
-  (var decalage-y (* (math.sin t) 5))
-  
-  ;; 3. Affiche le texte au centre avec l'effet de vague
-  (print "WORKFLOW OPERATIONNEL !" 45 (+ 64 decalage-y) couleur-texte)
-  
-  ;; 4. Fait avancer le temps
-  (set t (+ t 0.1)))
+  ;; Deplacement avec les fleches (btn 0=haut 1=bas 2=gauche 3=droite)
+  (when (btn 0) (set py (- py speed)))
+  (when (btn 1) (set py (+ py speed)))
+  (when (btn 2) (set px (- px speed)))
+  (when (btn 3) (set px (+ px speed)))
+
+  ;; Limites de l'ecran (240x136)
+  (when (< px 0) (set px 0))
+  (when (< py 20) (set py 20))
+  (when (> px (- 240 size)) (set px (- 240 size)))
+  (when (> py (- 136 size)) (set py (- 136 size)))
+
+  ;; Nettoie l'ecran (fond noir)
+  (cls 0)
+
+  ;; Dessine le joueur (carre blanc)
+  (rect px py size size 12))
