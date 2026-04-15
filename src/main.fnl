@@ -27,6 +27,10 @@
   ;; 2. Mise à jour (inputs + collisions gérées par world)
   (player.update joueur world)
 
+  ;; Attaque si touche E appuyée
+  (when (keyp 5)
+    (player.attack joueur enemies enemie))
+
   
   (each [i e (ipairs enemies)]
   (enemie.update e joueur)
@@ -41,5 +45,6 @@
   (each [_ e (ipairs enemies)]
     (enemie.draw e))
   (player.draw-ui joueur)
-  (player.draw joueur))
+  (player.draw joueur)
+  ;;(player.draw-attack-cone joueur)) ;; -- Debug : affiche le cône d'attaque --
 

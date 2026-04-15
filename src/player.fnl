@@ -1,5 +1,6 @@
 ;; -- Module Joueur --
 (local player {})
+(local abilities (include :abilities))
 
 ;; -- Etat initial du joueur --
 (fn player.new []
@@ -36,7 +37,13 @@
   (when (< p.x 0) (set p.x 0))
   (when (< p.y 20) (set p.y 20))
   (when (> p.x (- 240 p.size)) (set p.x (- 240 p.size)))
-  (when (> p.y (- 136 p.size)) (set p.y (- 136 p.size))))
+  (when (> p.y (- 136 p.size)) (set p.y (- 136 p.size)))
+
+  ;; Mémoriser la direction de déplacement pour l'attaque
+  (let [dx (if (btn 2) -1 (if (btn 3) 1 0))
+        dy (if (btn 0) -1 (if (btn 1) 1 0))]
+    (when (or (not= dx 0) (not= dy 0))
+      (set p.facing-angle (math.atan2 dy dx)))))
 
 
 ;; -- Dessin du sprite joueur (ID 20) --
@@ -66,5 +73,45 @@
   ;; ne pas dépasser max
   (when (> p.hp p.max-hp)
     (set p.hp p.max-hp)))
+
+;; -- Debug : affiche le cône d'attaque --
+(fn player.draw-attack-cone [p]
+  (let [stats (abilities.compute-sword-stats p.id-sword-upgrades)
+        facing (or p.facing-angle 0)
+        half-arc (* (/ (math.max stats.arc 15) 2) (/ math.pi 180))
+        cx (+ p.x (/ p.size 2))
+        cy (+ p.y (/ p.size 2))
+        r stats.range
+        a1 (- facing half-arc)
+        a2 (+ facing half-arc)]
+    ;; Bords du cône
+    (line cx cy (+ cx (* r (math.cos a1))) (+ cy (* r (math.sin a1))) 8)
+    (line cx cy (+ cx (* r (math.cos a2))) (+ cy (* r (math.sin a2))) 8)
+    ;; Arc entre les deux bords (approximé avec plusieurs segments)
+    (for [i 0 7]
+      (let [t1 (+ a1 (* (/ i 7) (* 2 half-arc)))
+            t2 (+ a1 (* (/ (+ i 1) 7) (* 2 half-arc)))]
+        (line (+ cx (* r (math.cos t1))) (+ cy (* r (math.sin t1)))
+              (+ cx (* r (math.cos t2))) (+ cy (* r (math.sin t2)))
+              8)))))
+
+;;Attaque en utilisant les dégats de l'arme + les upgrades
+(fn player.attack [p enemies enemie]
+  (let [stats (abilities.compute-sword-stats p.id-sword-upgrades)
+        facing (or p.facing-angle 0)
+        ;; arc = 0 (ligne droite) -> tolérance de 15°, sinon arc/2
+        half-arc (* (/ (math.max stats.arc 15) 2) (/ math.pi 180))]
+    (each [_ e (ipairs enemies)]
+      (let [dx (- e.x p.x)
+            dy (- e.y p.y)
+            dist (math.sqrt (+ (* dx dx) (* dy dy)))]
+        (when (< dist stats.range)
+          (let [angle-to-enemy (math.atan2 dy dx)
+                diff (math.abs (- angle-to-enemy facing))
+                ;; Normaliser entre 0 et pi
+                norm-diff (if (> diff math.pi) (- (* 2 math.pi) diff) diff)]
+            (when (<= norm-diff half-arc)
+              (for [i 1 stats.hits]
+                (enemie.take-damage e stats.damage)))))))))
 player
 
