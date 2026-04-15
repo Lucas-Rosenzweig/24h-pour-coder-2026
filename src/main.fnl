@@ -33,6 +33,11 @@
   (when (keyp 5)
     (player.attack joueur enemies enemie))
 
+  ;; Hit épée déclenché à la fin de chaque sweep
+  (when joueur.sword-hit-due
+    (set joueur.sword-hit-due false)
+    (player.do-sword-hit joueur enemies enemie))
+
   ;; Sort si touche A appuyée (keyp 1)
   (when (keyp 1)
     (player.spell-attack joueur enemies enemie projectiles lightning-flashes))
@@ -93,6 +98,9 @@
     (enemie.draw e))
   (each [_ proj (ipairs projectiles)]
     (circ (math.floor proj.x) (math.floor proj.y) 3 6))
+  ;; Cône d'attaque épée
+  (when (> joueur.sword-flash 0)
+    (player.draw-attack-cone joueur))
   ;; Dessin des flashs éclair (zigzag en blanc)
   (each [_ f (ipairs lightning-flashes)]
     (let [mx (+ (/ (+ f.x1 f.x2) 2) f.jx)

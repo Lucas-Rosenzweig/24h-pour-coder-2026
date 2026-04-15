@@ -13,9 +13,12 @@
    :max-hp 10
    ;; Si id = -1 vide
    :id-sword-upgrades [0]
-   :id-spell-upgrades {:id nil :applied-upgrades [1 2]}
+   :id-spell-upgrades {:id nil :applied-upgrades []}
    :id-utility -1
-   :spell-cooldown 0})
+   :spell-cooldown 0
+   :sword-flash 0
+   :sword-hits-left 0
+   :sword-hit-due false})
 
 ;; -- Logique de déplacement avec collisions --
 (fn player.update [p world]
@@ -44,6 +47,15 @@
         dy (if (btn 0) -1 (if (btn 1) 1 0))]
     (when (or (not= dx 0) (not= dy 0))
       (set p.facing-angle (math.atan2 dy dx))))
+
+  ;; Décrémentation sword-flash, hit à la fin de chaque sweep
+  (when (> p.sword-flash 0)
+    (set p.sword-flash (- p.sword-flash 1))
+    (when (= p.sword-flash 0)
+      (set p.sword-hit-due true)
+      (when (> p.sword-hits-left 1)
+        (set p.sword-hits-left (- p.sword-hits-left 1))
+        (set p.sword-flash 8))))
 
   ;; Cooldown sort
   (when (> p.spell-cooldown 0)
@@ -78,7 +90,7 @@
   (when (> p.hp p.max-hp)
     (set p.hp p.max-hp)))
 
-;; -- Debug : affiche le cône d'attaque --
+;; -- Animation sweep épée --
 (fn player.draw-attack-cone [p]
   (let [stats (abilities.compute-sword-stats p.id-sword-upgrades)
         facing (or p.facing-angle 0)
@@ -87,36 +99,46 @@
         cy (+ p.y (/ p.size 2))
         r stats.range
         a1 (- facing half-arc)
-        a2 (+ facing half-arc)]
-    ;; Bords du cône
-    (line cx cy (+ cx (* r (math.cos a1))) (+ cy (* r (math.sin a1))) 8)
-    (line cx cy (+ cx (* r (math.cos a2))) (+ cy (* r (math.sin a2))) 8)
-    ;; Arc entre les deux bords (approximé avec plusieurs segments)
-    (for [i 0 7]
-      (let [t1 (+ a1 (* (/ i 7) (* 2 half-arc)))
-            t2 (+ a1 (* (/ (+ i 1) 7) (* 2 half-arc)))]
+        ;; progression 0→1 au fil des frames (sword-flash décroit de 8 à 0)
+        progress (/ (- 8 p.sword-flash) 8)
+        swept (* progress 2 half-arc)
+        cur-angle (+ a1 swept)]
+    ;; Ligne principale qui balaie
+    (line cx cy
+          (+ cx (* r (math.cos cur-angle)))
+          (+ cy (* r (math.sin cur-angle)))
+          12)
+    ;; Sillage : arc de a1 jusqu'à cur-angle
+    (for [i 0 5]
+      (let [t1 (+ a1 (* (/ i 6) swept))
+            t2 (+ a1 (* (/ (+ i 1) 6) swept))]
         (line (+ cx (* r (math.cos t1))) (+ cy (* r (math.sin t1)))
               (+ cx (* r (math.cos t2))) (+ cy (* r (math.sin t2)))
-              8)))))
+              12)))))
 
-;;Attaque en utilisant les dégats de l'arme + les upgrades
-(fn player.attack [p enemies enemie]
+;; Applique 1 hit de l'épée (appelé à la fin de chaque sweep)
+(fn player.do-sword-hit [p enemies enemie]
   (let [stats (abilities.compute-sword-stats p.id-sword-upgrades)
         facing (or p.facing-angle 0)
-        ;; arc = 0 (ligne droite) -> tolérance de 15°, sinon arc/2
-        half-arc (* (/ (math.max stats.arc 15) 2) (/ math.pi 180))]
+        half-arc (* (/ (math.max stats.arc 15) 2) (/ math.pi 180))
+        cx (+ p.x (/ p.size 2))
+        cy (+ p.y (/ p.size 2))]
     (each [_ e (ipairs enemies)]
-      (let [dx (- e.x p.x)
-            dy (- e.y p.y)
+      (let [dx (- (+ e.x (/ e.size 2)) cx)
+            dy (- (+ e.y (/ e.size 2)) cy)
             dist (math.sqrt (+ (* dx dx) (* dy dy)))]
         (when (< dist stats.range)
           (let [angle-to-enemy (math.atan2 dy dx)
                 diff (math.abs (- angle-to-enemy facing))
-                ;; Normaliser entre 0 et pi
                 norm-diff (if (> diff math.pi) (- (* 2 math.pi) diff) diff)]
             (when (<= norm-diff half-arc)
-              (for [i 1 stats.hits]
-                (enemie.take-damage e stats.damage)))))))))
+              (enemie.take-damage e stats.damage))))))))
+
+;; Lance l'animation — les dégâts sont appliqués à la fin de chaque sweep
+(fn player.attack [p enemies enemie]
+  (let [stats (abilities.compute-sword-stats p.id-sword-upgrades)]
+    (set p.sword-flash 8)
+    (set p.sword-hits-left stats.hits)))
 
 ;; Attaque de sort (ex: boule de feu, foudre)
 (fn player.spell-attack [p enemies enemie projectiles lightning-flashes]

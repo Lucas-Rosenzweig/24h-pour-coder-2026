@@ -9,7 +9,7 @@
   {:damage 1
    :cooldown 2
    :range 12
-   :arc 0 ;; Correspond a l'angle d'attaque en degres (0 = ligne droite), avec arc = 120, l'attaque couvre un cone de 120 degres devant le joueur
+   :arc 120 ;; Correspond a l'angle d'attaque en degres (0 = ligne droite), avec arc = 120, l'attaque couvre un cone de 120 degres devant le joueur
    :hits 1})
 
 ;; Types : :stat (stackable infini) | :behavior (rules specifiques)
