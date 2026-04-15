@@ -56,7 +56,7 @@
 
   ;; Limites de l'écran (Optionnel si la map est entourée de murs)
   (when (< p.x 0) (set p.x 0))
-  (when (< p.y 20) (set p.y 20))
+  (when (< p.y 16) (set p.y 16))
   (when (> p.x (- 240 p.size)) (set p.x (- 240 p.size)))
   (when (> p.y (- 136 p.size)) (set p.y (- 136 p.size)))
 
