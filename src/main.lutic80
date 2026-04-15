@@ -137,22 +137,9 @@ package.preload["player"] = package.preload["player"] or function(...)
     end
   end
   player.new = function()
-    return {x = 120, y = 68, size = 8, speed = 2, color = 12, hp = 10, ["max-hp"] = 10, ["id-sword-upgrades"] = {0}, ["id-spell-upgrades"] = {id = nil, ["applied-upgrades"] = {}}, ["id-utility"] = -1, ["spell-cooldown"] = 0, ["sword-flash"] = 0, ["sword-hits-left"] = 0, ["sword-hit-due"] = false}
+    return {x = 120, y = 68, size = 8, speed = 2, color = 12, hp = 10, ["max-hp"] = 10, ["id-sword-upgrades"] = {0}, ["id-spell-upgrades"] = {id = nil, ["applied-upgrades"] = {}}, ["id-utility"] = -1, ["spell-cooldown"] = 0}
   end
-  player.update = function(p, world, enemies)
-    local function hit_enemy_3f(nx, ny)
-      local hit = false
-      do
-        local soft_size = (p.size - 2)
-        for _, e in ipairs(enemies) do
-          if world["collide?"]((nx + 1), (ny + 1), soft_size, e.x, e.y, e.size) then
-            hit = true
-          else
-          end
-        end
-      end
-      return hit
-    end
+  player.update = function(p, world)
     do
       local dy
       if btn(0) then
@@ -165,7 +152,7 @@ package.preload["player"] = package.preload["player"] or function(...)
         end
       end
       if (dy ~= 0) then
-        if (world["can-move?"](p.x, (p.y + dy), p.size) and not hit_enemy_3f(p.x, (p.y + dy))) then
+        if world["can-move?"](p.x, (p.y + dy), p.size) then
           p.y = (p.y + dy)
         else
         end
@@ -184,7 +171,7 @@ package.preload["player"] = package.preload["player"] or function(...)
         end
       end
       if (dx ~= 0) then
-        if (world["can-move?"]((p.x + dx), p.y, p.size) and not hit_enemy_3f((p.x + dx), p.y)) then
+        if world["can-move?"]((p.x + dx), p.y, p.size) then
           p.x = (p.x + dx)
         else
         end
@@ -233,19 +220,6 @@ package.preload["player"] = package.preload["player"] or function(...)
       else
       end
     end
-    if (p["sword-flash"] > 0) then
-      p["sword-flash"] = (p["sword-flash"] - 1)
-      if (p["sword-flash"] == 0) then
-        p["sword-hit-due"] = true
-        if (p["sword-hits-left"] > 1) then
-          p["sword-hits-left"] = (p["sword-hits-left"] - 1)
-          p["sword-flash"] = 8
-        else
-        end
-      else
-      end
-    else
-    end
     if (p["spell-cooldown"] > 0) then
       p["spell-cooldown"] = (p["spell-cooldown"] - 1)
       return nil
@@ -254,7 +228,7 @@ package.preload["player"] = package.preload["player"] or function(...)
     end
   end
   player.draw = function(p)
-    return spr(12, p.x, p.y, 0)
+    return spr(20, p.x, p.y, 0)
   end
   player["take-damage"] = function(p, dmg)
     p.hp = (p.hp - dmg)
@@ -351,26 +325,23 @@ package.preload["player"] = package.preload["player"] or function(...)
     local cy = (p.y + (p.size / 2))
     local r = stats.range
     local a1 = (facing - half_arc)
-    local progress = ((8 - p["sword-flash"]) / 8)
-    local swept = (progress * 2 * half_arc)
-    local cur_angle = (a1 + swept)
-    line(cx, cy, (cx + (r * math.cos(cur_angle))), (cy + (r * math.sin(cur_angle))), 12)
-    for i = 0, 5 do
-      local t1 = (a1 + ((i / 6) * swept))
-      local t2 = (a1 + (((i + 1) / 6) * swept))
-      line((cx + (r * math.cos(t1))), (cy + (r * math.sin(t1))), (cx + (r * math.cos(t2))), (cy + (r * math.sin(t2))), 12)
+    local a2 = (facing + half_arc)
+    line(cx, cy, (cx + (r * math.cos(a1))), (cy + (r * math.sin(a1))), 8)
+    line(cx, cy, (cx + (r * math.cos(a2))), (cy + (r * math.sin(a2))), 8)
+    for i = 0, 7 do
+      local t1 = (a1 + ((i / 7) * (2 * half_arc)))
+      local t2 = (a1 + (((i + 1) / 7) * (2 * half_arc)))
+      line((cx + (r * math.cos(t1))), (cy + (r * math.sin(t1))), (cx + (r * math.cos(t2))), (cy + (r * math.sin(t2))), 8)
     end
     return nil
   end
-  player["do-sword-hit"] = function(p, enemies, enemie)
+  player.attack = function(p, enemies, enemie)
     local stats = abilities["compute-sword-stats"](p["id-sword-upgrades"])
     local facing = (p["facing-angle"] or 0)
     local half_arc = ((math.max(stats.arc, 15) / 2) * (math.pi / 180))
-    local cx = (p.x + (p.size / 2))
-    local cy = (p.y + (p.size / 2))
     for _, e in ipairs(enemies) do
-      local dx = ((e.x + (e.size / 2)) - cx)
-      local dy = ((e.y + (e.size / 2)) - cy)
+      local dx = (e.x - p.x)
+      local dy = (e.y - p.y)
       local dist = math.sqrt(((dx * dx) + (dy * dy)))
       if (dist < stats.range) then
         local angle_to_enemy = math.atan2(dy, dx)
@@ -382,18 +353,14 @@ package.preload["player"] = package.preload["player"] or function(...)
           norm_diff = diff
         end
         if (norm_diff <= half_arc) then
-          enemie["take-damage"](e, stats.damage)
+          for i = 1, stats.hits do
+            enemie["take-damage"](e, stats.damage)
+          end
         else
         end
       else
       end
     end
-    return nil
-  end
-  player.attack = function(p, enemies, enemie)
-    local stats = abilities["compute-sword-stats"](p["id-sword-upgrades"])
-    p["sword-flash"] = 8
-    p["sword-hits-left"] = stats.hits
     return nil
   end
   player["spell-attack"] = function(p, enemies, enemie, projectiles, lightning_flashes)
@@ -509,7 +476,7 @@ package.preload["player"] = package.preload["player"] or function(...)
 end
 package.preload["abilities"] = package.preload["abilities"] or function(...)
   local abilities = {}
-  local SWORD_BASE = {damage = 1, cooldown = 2, range = 12, arc = 120, hits = 1}
+  local SWORD_BASE = {damage = 1, cooldown = 2, range = 12, arc = 0, hits = 1}
   local sword_upgrades = {{name = "Degats+", type = "stat", ["stack?"] = true, effects = {damage = 3}}, {name = "Vitesse+", type = "stat", ["stack?"] = true, effects = {cooldown = -3}}, {name = "Portee+", type = "stat", ["stack?"] = true, effects = {range = 4}}, {name = "Arc tranchant", type = "behavior", ["stack?"] = true, effects = {arc = 60}}, {name = "Double frappe", type = "behavior", ["stack?"] = true, effects = {hits = 1}}}
   abilities["compute-sword-stats"] = function(upgrade_ids)
     local stats = {damage = SWORD_BASE.damage, cooldown = SWORD_BASE.cooldown, range = SWORD_BASE.range, arc = SWORD_BASE.arc, hits = SWORD_BASE.hits}
@@ -639,138 +606,60 @@ package.preload["world"] = package.preload["world"] or function(...)
       local s1 = hex:sub(i, i)
       local s2 = hex:sub((i + 1), (i + 1))
       local p1
-      local _74_
+      local _70_
       if (s1 == "") then
-        _74_ = "0"
+        _70_ = "0"
       else
-        _74_ = s1
+        _70_ = s1
       end
-      p1 = tonumber(_74_, 16)
+      p1 = tonumber(_70_, 16)
       local p2
-      local _76_
+      local _72_
       if (s2 == "") then
-        _76_ = "0"
+        _72_ = "0"
       else
-        _76_ = s2
+        _72_ = s2
       end
-      p2 = tonumber(_76_, 16)
+      p2 = tonumber(_72_, 16)
       poke((addr + ((i - 1) // 2)), ((p2 * 16) + p1))
     end
     return nil
   end
-  local map1_c = {{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}, {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}, {1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 1}, {1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 1}, {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}, {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}, {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}, {1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1}, {1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1}, {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}, {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}, {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}, {1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1}, {1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1}, {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}, {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}}
-  local map1_v = {{5, 4, 0, 1, 9, 9, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1}, {3, 2, 99, 8, 8, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 3}, {1, 0, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 3}, {1, 0, 99, 2, 6, 6, 6, 6, 6, 3, 99, 99, 99, 99, 2, 6, 6, 6, 6, 6, 3, 99, 99, 99, 2, 6, 6, 6, 3, 3}, {1, 0, 99, 2, 6, 6, 6, 6, 6, 3, 99, 99, 99, 99, 2, 6, 6, 6, 6, 6, 3, 99, 99, 99, 2, 6, 6, 6, 3, 3}, {1, 0, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 3}, {1, 0, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 3}, {1, 0, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 3}, {1, 0, 99, 2, 6, 6, 3, 99, 99, 99, 2, 6, 6, 6, 3, 99, 99, 99, 2, 6, 6, 6, 3, 99, 99, 99, 2, 6, 3, 3}, {1, 0, 99, 2, 6, 6, 3, 99, 99, 99, 2, 6, 6, 6, 3, 99, 99, 99, 2, 6, 6, 6, 3, 99, 99, 99, 2, 6, 3, 3}, {1, 0, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 3}, {1, 0, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 3}, {1, 0, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 3}, {1, 0, 99, 2, 6, 6, 6, 3, 99, 99, 2, 6, 6, 6, 6, 3, 99, 99, 2, 6, 6, 6, 6, 3, 99, 99, 2, 6, 6, 6, 3}, {1, 0, 99, 2, 6, 6, 6, 3, 99, 99, 2, 6, 6, 6, 6, 3, 99, 99, 2, 6, 6, 6, 6, 3, 99, 99, 2, 6, 6, 6, 3}, {1, 0, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 3}, {3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3}}
-  local map_v = {}
-  local matrice_active = map1_c
-  M["construire-map"] = function()
-    map_v = {}
-    for num_ligne, ligne in ipairs(map1_v) do
-      local new_ligne = {}
-      for num_col, id in ipairs(ligne) do
-        local function _79_()
-          if (id == 99) then
-            if (math.random(100) > 70) then
-              return 5
-            else
-              return 4
-            end
-          else
-            return id
-          end
-        end
-        table.insert(new_ligne, _79_())
-      end
-      table.insert(map_v, new_ligne)
-    end
-    return nil
-  end
   M["init-assets"] = function()
-    poke(16320, 68)
-    poke(16321, 36)
-    poke(16322, 52)
-    poke(16323, 20)
-    poke(16324, 12)
-    poke(16325, 28)
-    poke(16326, 133)
-    poke(16327, 76)
-    poke(16328, 48)
-    poke(16329, 210)
-    poke(16330, 125)
-    poke(16331, 44)
-    poke(16332, 133)
-    poke(16333, 76)
-    poke(16334, 48)
-    poke(16335, 52)
-    poke(16336, 101)
-    poke(16337, 36)
-    poke(16338, 208)
-    poke(16339, 70)
-    poke(16340, 72)
-    poke(16341, 117)
-    poke(16342, 113)
-    poke(16343, 97)
-    poke(16344, 89)
-    poke(16345, 125)
-    poke(16346, 206)
-    poke(16347, 210)
-    poke(16348, 125)
-    poke(16349, 44)
-    poke(16350, 133)
-    poke(16351, 149)
-    poke(16352, 161)
-    poke(16353, 109)
-    poke(16354, 170)
-    poke(16355, 44)
-    poke(16356, 210)
-    poke(16357, 170)
-    poke(16358, 153)
-    poke(16359, 109)
-    poke(16360, 194)
-    poke(16361, 202)
-    poke(16362, 218)
-    poke(16363, 212)
-    poke(16364, 94)
-    poke(16365, 222)
-    poke(16366, 238)
-    poke(16367, 214)
-    M["design-spr"](0, "0010010100100110001001011110011000100101001111100010010100100110")
-    M["design-spr"](1, "0312201203122012031220120321111103122012031220120312201203122012")
-    M["design-spr"](8, "0110010010100100011111001010010001100111101001000110010010100100")
-    M["design-spr"](9, "0000000033333333111121112222122222221222000010001111111122221222")
-    M["design-spr"](10, "2102213021022130210221302102213011111230210221302102213021022130")
-    M["design-spr"](11, "3330000032233333322111110312322203133122031213000312203103122013")
-    M["design-spr"](16, "0101010110101010111111110010000000100000111111110000100000001000")
-    M["design-spr"](17, "2221222211111111000100002221222222212222111211113333333300000000")
-    M["design-spr"](2, "2100000012100000012111110010100000110100001010110010010100100110")
-    M["design-spr"](3, "0321111103122012031220120312201203122012031220120312201203122012")
-    M["design-spr"](4, "0000000033333333211111111222222212222222100000001111111112222222")
-    M["design-spr"](5, "3330000032233333322111110312322203133122031213000312203103122013")
-    M["design-spr"](6, "8888888888888888888888888888888888888888888888888888888888888888")
-    M["design-spr"](12, "000CC00000CCCC000C222C000CBBBC0000BBBB0000333300000110000000000000")
-    math.randomseed(tstamp())
-    return M["construire-map"]()
+    poke(16320, 20, 40, 20)
+    poke(16323, 40, 100, 40)
+    poke(16326, 80, 160, 60)
+    poke(16329, 140, 210, 80)
+    poke(16332, 60, 30, 20)
+    poke(16335, 110, 70, 40)
+    poke(16338, 160, 110, 70)
+    poke(16356, 220, 230, 200)
+    M["design-spr"](2, "2222222222232222223322222222222222222222222223222222332222222222")
+    M["design-spr"](10, "2222000022001111201133332013333301133333011333330111333301111111")
+    M["design-spr"](11, "0000222211110022333311023333110233331102333311023333110211111102")
+    M["design-spr"](12, "0111111120001111222205662222056622220566222204552222200022222222")
+    M["design-spr"](13, "1111111011110002554022225540222255402222440022220022222222222222")
+    return M["design-spr"](20, "000CC00000CCCC000C000C000C333C0000333300005555000000000000000000")
   end
+  local map_v = {{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}, {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}, {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}, {2, 2, 2, 2, 2, 10, 11, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 10, 11, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}, {2, 2, 2, 2, 2, 12, 13, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 12, 13, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}, {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}, {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}, {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 10, 11, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}, {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 12, 13, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}, {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}, {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}, {2, 2, 2, 10, 11, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 10, 11, 2, 2, 2, 2, 2, 2, 2}, {2, 2, 2, 12, 13, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 12, 13, 2, 2, 2, 2, 2, 2, 2}, {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}, {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}, {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}, {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}}
   M["wall?"] = function(x, y)
-    if ((y < 20) or (x < 0) or (x > 239) or (y > 135)) then
+    if (y < 20) then
       return true
     else
       local col = ((x // 8) + 1)
       local lig = (((y - 20) // 8) + 1)
-      local ligne = matrice_active[lig]
+      local ligne = map_v[lig]
       local valeur
       if ligne then
-        valeur = (ligne[col] or 1)
+        valeur = ligne[col]
       else
-        valeur = 1
+        valeur = 2
       end
-      return (valeur == 1)
+      return ((valeur == 12) or (valeur == 13))
     end
   end
   M["can-move?"] = function(x, y, size)
     return not (M["wall?"](x, y) or M["wall?"]((x + (size - 1)), y) or M["wall?"](x, (y + (size - 1))) or M["wall?"]((x + (size - 1)), (y + (size - 1))))
-  end
-  M["collide?"] = function(x1, y1, s1, x2, y2, s2)
-    return ((x1 < (x2 + s2)) and ((x1 + s1) > x2) and (y1 < (y2 + s2)) and ((y1 + s1) > y2))
   end
   M.draw = function()
     for num_ligne, ligne in ipairs(map_v) do
@@ -787,14 +676,13 @@ local initialized = false
 local enemie
 package.preload["enemie"] = package.preload["enemie"] or function(...)
   local enemie = {}
-  local astar = require("astar")
   enemie.new = function(x, y)
     return {x = x, y = y, size = 8, speed = 0.5, color = 8, hp = 3, ["attack-timer"] = 0, ["stun-timer"] = 0, ["dot-timer"] = 0, ["dot-dmg"] = 0, ["dot-tick"] = 0}
   end
   enemie.distance = function(e, joueur)
     return math.sqrt((((joueur.x - e.x) * (joueur.x - e.x)) + ((joueur.y - e.y) * (joueur.y - e.y))))
   end
-  enemie.update = function(e, joueur, world, enemies)
+  enemie.update = function(e, joueur)
     if (e["dot-timer"] > 0) then
       e["dot-timer"] = (e["dot-timer"] - 1)
       e["dot-tick"] = (e["dot-tick"] + 1)
@@ -815,77 +703,16 @@ package.preload["enemie"] = package.preload["enemie"] or function(...)
     else
     end
     if (e["stun-timer"] <= 0) then
-      if not e.path then
-        e.path = {}
+      local dx = (joueur.x - e.x)
+      local dy = (joueur.y - e.y)
+      local dist = math.sqrt(((dx * dx) + (dy * dy)))
+      if (dist > 0) then
+        dx = (dx / dist)
+        dy = (dy / dist)
       else
       end
-      if not e["path-timer"] then
-        e["path-timer"] = 0
-      else
-      end
-      e["path-timer"] = (e["path-timer"] - 1)
-      if (e["path-timer"] <= 0) then
-        local custom_wall_fn
-        local function _97_(px, py)
-          local is_wall = world["wall?"](px, py)
-          if not is_wall then
-            for _, other in ipairs(enemies) do
-              if ((other ~= e) and (px >= other.x) and (px <= (other.x + other.size)) and (py >= other.y) and (py <= (other.y + other.size))) then
-                is_wall = true
-              else
-              end
-            end
-          else
-          end
-          return is_wall
-        end
-        custom_wall_fn = _97_
-        e.path = astar["find-path"]((e.x + 4), (e.y + 4), (joueur.x + 4), (joueur.y + 4), custom_wall_fn)
-        e["path-timer"] = (60 + math.random(0, 10))
-      else
-      end
-      local dx = 0
-      local dy = 0
-      if (#e.path > 0) then
-        local target = e.path[1]
-        local tx = target[1]
-        local ty = target[2]
-        local diff_x = (tx - e.x)
-        local diff_y = (ty - e.y)
-        local dist = math.sqrt(((diff_x * diff_x) + (diff_y * diff_y)))
-        if (dist <= e.speed) then
-          e.x = tx
-          e.y = ty
-          table.remove(e.path, 1)
-        else
-          dx = (diff_x / dist)
-          dy = (diff_y / dist)
-        end
-      else
-      end
-      local function hit_other_enemie_3f(nx, ny)
-        local hit = false
-        do
-          local soft_size = (e.size - 2)
-          for _, other in ipairs(enemies) do
-            if ((other ~= e) and world["collide?"]((nx + 1), (ny + 1), soft_size, other.x, other.y, other.size)) then
-              hit = true
-            else
-            end
-          end
-        end
-        return hit
-      end
-      local nx = (e.x + (dx * e.speed))
-      local ny = (e.y + (dy * e.speed))
-      if ((dx ~= 0) and world["can-move?"](nx, e.y, e.size) and not world["collide?"](nx, e.y, e.size, joueur.x, joueur.y, joueur.size) and not hit_other_enemie_3f(nx, e.y)) then
-        e.x = nx
-      else
-      end
-      if ((dy ~= 0) and world["can-move?"](e.x, ny, e.size) and not world["collide?"](e.x, ny, e.size, joueur.x, joueur.y, joueur.size) and not hit_other_enemie_3f(e.x, ny)) then
-        e.y = ny
-      else
-      end
+      e.x = (e.x + (dx * e.speed))
+      e.y = (e.y + (dy * e.speed))
     else
     end
     if (e["attack-timer"] > 0) then
@@ -895,8 +722,11 @@ package.preload["enemie"] = package.preload["enemie"] or function(...)
       return nil
     end
   end
-  enemie.attack = function(e, joueur, take_damage, world)
-    if (world["collide?"]((e.x - 1), (e.y - 1), (e.size + 2), joueur.x, joueur.y, joueur.size) and (e["attack-timer"] == 0)) then
+  enemie["collide?"] = function(e, joueur)
+    return ((math.abs((e.x - joueur.x)) < e.size) and (math.abs((e.y - joueur.y)) < e.size))
+  end
+  enemie.attack = function(e, joueur, take_damage)
+    if (enemie["collide?"](e, joueur) and (e["attack-timer"] == 0)) then
       take_damage(joueur, 1)
       e["attack-timer"] = 30
       return nil
@@ -935,163 +765,27 @@ package.preload["enemie"] = package.preload["enemie"] or function(...)
   end
   return enemie
 end
-package.preload["astar"] = package.preload["astar"] or function(...)
-  local M = {}
-  local function heuristic(x1, y1, x2, y2)
-    return (math.abs((x1 - x2)) + math.abs((y1 - y2)))
-  end
-  local function make_key(x, y)
-    return (x .. "," .. y)
-  end
-  M["find-path"] = function(sx, sy, tx, ty, wall_3f)
-    local start_x = ((sx // 8) + 1)
-    local start_y = (((sy - 20) // 8) + 1)
-    local target_x = ((tx // 8) + 1)
-    local target_y = (((ty - 20) // 8) + 1)
-    local path = {}
-    if wall_3f(tx, ty) then
-      return path
-    else
-      local open_set = {{start_x, start_y}}
-      local came_from = {}
-      local g_score = {[make_key(start_x, start_y)] = 0}
-      local f_score = {[make_key(start_x, start_y)] = heuristic(start_x, start_y, target_x, target_y)}
-      local function get_score(score_map, k)
-        return (score_map[k] or 999999)
-      end
-      local found = false
-      local iter = 0
-      while ((#open_set > 0) and not found and (iter < 1000)) do
-        iter = (iter + 1)
-        local current_idx = 1
-        local current_f = get_score(f_score, make_key(open_set[1][1], open_set[1][2]))
-        for i = 2, #open_set do
-          local pt = open_set[i]
-          local f = get_score(f_score, make_key(pt[1], pt[2]))
-          if (f < current_f) then
-            current_f = f
-            current_idx = i
-          else
-          end
-        end
-        local current = open_set[current_idx]
-        local cx = current[1]
-        local cy = current[2]
-        local k = make_key(cx, cy)
-        if ((cx == target_x) and (cy == target_y)) then
-          found = true
-        else
-          table.remove(open_set, current_idx)
-          for _, dir in ipairs({{0, -1}, {0, 1}, {-1, 0}, {1, 0}}) do
-            local nx = (cx + dir[1])
-            local ny = (cy + dir[2])
-            local nk = make_key(nx, ny)
-            local px = (((nx - 1) * 8) + 4)
-            local py = (((ny - 1) * 8) + 24)
-            if not wall_3f(px, py) then
-              local tentative_g = (get_score(g_score, k) + 1)
-              if (tentative_g < get_score(g_score, nk)) then
-                came_from[nk] = current
-                g_score[nk] = tentative_g
-                f_score[nk] = (tentative_g + heuristic(nx, ny, target_x, target_y))
-                local in_open = false
-                for _0, p in ipairs(open_set) do
-                  if ((p[1] == nx) and (p[2] == ny)) then
-                    in_open = true
-                  else
-                  end
-                end
-                if not in_open then
-                  table.insert(open_set, {nx, ny})
-                else
-                end
-              else
-              end
-            else
-            end
-          end
-        end
-      end
-      if found then
-        local curr = {target_x, target_y}
-        while curr do
-          do
-            local px = ((((curr[1] - 1) * 8) + 4) - 4)
-            local py = ((((curr[2] - 1) * 8) + 24) - 4)
-            table.insert(path, 1, {px, py})
-          end
-          if ((curr[1] == start_x) and (curr[2] == start_y)) then
-            curr = nil
-          else
-            curr = came_from[make_key(curr[1], curr[2])]
-          end
-        end
-      else
-      end
-      return path
-    end
-  end
-  return M
-end
 enemie = require("enemie")
 local enemies = {}
 local projectiles = {}
 local lightning_flashes = {}
 local reward_screen = item.new()
-local pickups = {}
-local pickup_spawn_timer = 180
-local pickup_spawn_delay = 300
-local max_pickups = 3
+local test_item = {x = 112, y = 56, size = 8, active = true}
 table.insert(enemies, enemie.new(50, 50))
 table.insert(enemies, enemie.new(180, 100))
-table.insert(enemies, enemie.new(180, 90))
-table.insert(enemies, enemie.new(180, 120))
 local joueur = player.new()
 local function player_overlap_item_3f(p, pickup)
   return (pickup.active and (math.abs((p.x - pickup.x)) < pickup.size) and (math.abs((p.y - pickup.y)) < pickup.size))
 end
-local function spawn_pickup()
-  if (#pickups < max_pickups) then
-    local attempts = 0
-    local spawned = false
-    while ((attempts < 20) and not spawned) do
-      local x = (math.random(1, 28) * 8)
-      local y = (20 + (math.random(1, 13) * 8))
-      attempts = (attempts + 1)
-      if (not world["wall?"](x, y) and not world["wall?"]((x + 7), (y + 7))) then
-        table.insert(pickups, {x = x, y = y, size = 8, active = true})
-        spawned = true
-      else
-      end
-    end
-    return nil
-  else
-    return nil
-  end
-end
 local function update_game()
-  player.update(joueur, world, enemies)
-  pickup_spawn_timer = (pickup_spawn_timer - 1)
-  if (pickup_spawn_timer <= 0) then
-    spawn_pickup()
-    pickup_spawn_timer = pickup_spawn_delay
+  player.update(joueur, world)
+  if player_overlap_item_3f(joueur, test_item) then
+    test_item.active = false
+    item.open(reward_screen, joueur)
   else
-  end
-  for i = #pickups, 1, -1 do
-    local pickup = pickups[i]
-    if player_overlap_item_3f(joueur, pickup) then
-      table.remove(pickups, i)
-      item.open(reward_screen, joueur)
-    else
-    end
   end
   if keyp(5) then
     player.attack(joueur, enemies, enemie)
-  else
-  end
-  if joueur["sword-hit-due"] then
-    joueur["sword-hit-due"] = false
-    player["do-sword-hit"](joueur, enemies, enemie)
   else
   end
   if keyp(1) then
@@ -1099,8 +793,8 @@ local function update_game()
   else
   end
   for i, e in ipairs(enemies) do
-    enemie.update(e, joueur, world, enemies)
-    enemie.attack(e, joueur, player["take-damage"], world)
+    enemie.update(e, joueur)
+    enemie.attack(e, joueur, player["take-damage"])
     if enemie["is-dead?"](e) then
       table.remove(enemies, i)
     else
@@ -1182,12 +876,9 @@ local function draw_game()
   for _, proj in ipairs(projectiles) do
     circ(math.floor(proj.x), math.floor(proj.y), 3, 6)
   end
-  for _, pickup in ipairs(pickups) do
-    circ((pickup.x + 4), (pickup.y + 4), 4, 10)
-    circ((pickup.x + 4), (pickup.y + 4), 2, 12)
-  end
-  if (joueur["sword-flash"] > 0) then
-    player["draw-attack-cone"](joueur)
+  if test_item.active then
+    circ((test_item.x + 4), (test_item.y + 4), 4, 10)
+    circ((test_item.x + 4), (test_item.y + 4), 2, 12)
   else
   end
   for _, f in ipairs(lightning_flashes) do
@@ -1197,7 +888,8 @@ local function draw_game()
     line(mx, my, f.x2, f.y2, 12)
   end
   player["draw-ui"](joueur)
-  return player.draw(joueur)
+  player.draw(joueur)
+  return print("Item test sur la map", 5, 14, 12, false, 1, true)
 end
 _G.TIC = function()
   if not initialized then

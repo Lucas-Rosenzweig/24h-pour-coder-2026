@@ -11,8 +11,10 @@
    :color 8
    :hp 3
    :attack-timer 0
-   
-   })
+   :stun-timer 0
+   :dot-timer 0
+   :dot-dmg 0
+   :dot-tick 0})
 
 ;; =========================
 ;; Distance
@@ -26,94 +28,102 @@
 ;; IA : Pathfinding A-Star "Pixe-Perfect"
 ;; =========================
 (fn enemie.update [e joueur world enemies]
-  
-  ;; Variables d'état pour le pathfinding cache
-  (when (not e.path) (set e.path []))
-  (when (not e.path-timer) (set e.path-timer 0))
+  ;; DoT processing
+  (when (> e.dot-timer 0)
+    (set e.dot-timer (- e.dot-timer 1))
+    (set e.dot-tick (+ e.dot-tick 1))
+    (when (>= e.dot-tick 60)
+      (set e.dot-tick 0)
+      (set e.hp (- e.hp e.dot-dmg)))
+    (when (<= e.dot-timer 0)
+      (set e.dot-dmg 0)
+      (set e.dot-tick 0)))
 
-  (set e.path-timer (- e.path-timer 1))
+  ;; Stun processing
+  (when (> e.stun-timer 0)
+    (set e.stun-timer (- e.stun-timer 1)))
 
-  ;; Recalculer le chemin complet toutes les 60 frames (~ 1 sec)
-  (when (<= e.path-timer 0)
-    
-    (local custom-wall-fn
-      (fn [px py]
-        (var is-wall (world.wall? px py))
-        ;; Si ce n'est pas un mur classique, on regarde s'il y a un autre ennemi sur cette case
-        (when (not is-wall)
-          (each [_ other (ipairs enemies)]
-            (when (and (not= other e)
-                       (>= px other.x) (<= px (+ other.x other.size))
-                       (>= py other.y) (<= py (+ other.y other.size)))
-              (set is-wall true))))
-        is-wall))
+  ;; Mouvement seulement si pas stun
+  (when (<= e.stun-timer 0)
+    ;; Variables d'état pour le pathfinding cache
+    (when (not e.path) (set e.path []))
+    (when (not e.path-timer) (set e.path-timer 0))
 
-    ;; On passe le CENTRE (+4) des entités pour éviter que le coin mathématique déborde sur un mur
-    (set e.path (astar.find-path (+ e.x 4) (+ e.y 4) (+ joueur.x 4) (+ joueur.y 4) custom-wall-fn))
-    
-    ;; Ajout d'une petite variation aléatoire au timer pour désynchroniser les calculs des monstres
-    (set e.path-timer (+ 60 (math.random 0 10))))
+    (set e.path-timer (- e.path-timer 1))
 
-  (var dx 0)
-  (var dy 0)
+    ;; Recalculer le chemin complet toutes les 60 frames (~ 1 sec)
+    (when (<= e.path-timer 0)
 
-  ;; S'il y a un chemin valide, pointer vers le prochain "checkpoint" (pixel précis visé)
-  (if (> (length e.path) 0)
-      (let [target (. e.path 1)
-            tx (. target 1)
-            ty (. target 2)]
-        
-        ;; Distance vers ce noeud
-        (var diff-x (- tx e.x))
-        (var diff-y (- ty e.y))
-        (local dist (math.sqrt (+ (* diff-x diff-x) (* diff-y diff-y))))
-        
-        ;; Tolérance d'arrivée. Quand l'ennemi le touche, on se "snap" sur la grille.
-        ;; Cela évite d'être décalé d'un demi-pixel et d'accrocher les murs dans les virages.
-        (if (<= dist e.speed) 
-            (do
-              (set e.x tx)
-              (set e.y ty)
-              (table.remove e.path 1))
-            (do
-              ;; Direction normalisée
-              (set dx (/ diff-x dist))
-              (set dy (/ diff-y dist))))))
+      (local custom-wall-fn
+        (fn [px py]
+          (var is-wall (world.wall? px py))
+          ;; Si ce n'est pas un mur classique, on regarde s'il y a un autre ennemi sur cette case
+          (when (not is-wall)
+            (each [_ other (ipairs enemies)]
+              (when (and (not= other e)
+                         (>= px other.x) (<= px (+ other.x other.size))
+                         (>= py other.y) (<= py (+ other.y other.size)))
+                (set is-wall true))))
+          is-wall))
 
-  ;; Fonction pour vérifier si on touche un AUTRE ennemi
-  (fn hit-other-enemie? [nx ny]
-    (var hit false)
-    (let [soft-size (- e.size 2)]
-      (each [_ other (ipairs enemies)]
-        (when (and (not= other e)
-                   (world.collide? (+ nx 1) (+ ny 1) soft-size other.x other.y other.size))
-          (set hit true))))
-    hit)
+      ;; On passe le CENTRE (+4) des entités pour éviter que le coin mathématique déborde sur un mur
+      (set e.path (astar.find-path (+ e.x 4) (+ e.y 4) (+ joueur.x 4) (+ joueur.y 4) custom-wall-fn))
 
-  ;; Test des déplacements futurs
-  (let [nx (+ e.x (* dx e.speed))
-        ny (+ e.y (* dy e.speed))]
-    
-    (var moved false)
-    
-    ;; Mouvement X
-    (when (and (not= dx 0)
-               (world.can-move? nx e.y e.size)
-               (not (world.collide? nx e.y e.size joueur.x joueur.y joueur.size))
-               (not (hit-other-enemie? nx e.y)))
-      (set e.x nx)
-      (set moved true))
-      
-    ;; Mouvement Y
-    (when (and (not= dy 0)
-               (world.can-move? e.x ny e.size)
-               (not (world.collide? e.x ny e.size joueur.x joueur.y joueur.size))
-               (not (hit-other-enemie? e.x ny)))
-      (set e.y ny)
-      (set moved true))
-      
-    ;; (Le bloc de recalcul forcé a été retiré ici pour éviter de geler TIC-80 avec des appels A* en boucle)
-    )
+      ;; Ajout d'une petite variation aléatoire au timer pour désynchroniser les calculs des monstres
+      (set e.path-timer (+ 60 (math.random 0 10))))
+
+    (var dx 0)
+    (var dy 0)
+
+    ;; S'il y a un chemin valide, pointer vers le prochain "checkpoint" (pixel précis visé)
+    (if (> (length e.path) 0)
+        (let [target (. e.path 1)
+              tx (. target 1)
+              ty (. target 2)]
+
+          ;; Distance vers ce noeud
+          (var diff-x (- tx e.x))
+          (var diff-y (- ty e.y))
+          (local dist (math.sqrt (+ (* diff-x diff-x) (* diff-y diff-y))))
+
+          ;; Tolérance d'arrivée
+          (if (<= dist e.speed)
+              (do
+                (set e.x tx)
+                (set e.y ty)
+                (table.remove e.path 1))
+              (do
+                ;; Direction normalisée
+                (set dx (/ diff-x dist))
+                (set dy (/ diff-y dist))))))
+
+    ;; Fonction pour vérifier si on touche un AUTRE ennemi
+    (fn hit-other-enemie? [nx ny]
+      (var hit false)
+      (let [soft-size (- e.size 2)]
+        (each [_ other (ipairs enemies)]
+          (when (and (not= other e)
+                     (world.collide? (+ nx 1) (+ ny 1) soft-size other.x other.y other.size))
+            (set hit true))))
+      hit)
+
+    ;; Test des déplacements futurs
+    (let [nx (+ e.x (* dx e.speed))
+          ny (+ e.y (* dy e.speed))]
+
+      ;; Mouvement X
+      (when (and (not= dx 0)
+                 (world.can-move? nx e.y e.size)
+                 (not (world.collide? nx e.y e.size joueur.x joueur.y joueur.size))
+                 (not (hit-other-enemie? nx e.y)))
+        (set e.x nx))
+
+      ;; Mouvement Y
+      (when (and (not= dy 0)
+                 (world.can-move? e.x ny e.size)
+                 (not (world.collide? e.x ny e.size joueur.x joueur.y joueur.size))
+                 (not (hit-other-enemie? e.x ny)))
+        (set e.y ny))))
 
   ;; cooldown attaque
   (when (> e.attack-timer 0)
@@ -138,6 +148,15 @@
 ;; =========================
 (fn enemie.take-damage [e dmg]
   (set e.hp (- e.hp dmg)))
+
+(fn enemie.apply-dot [e dmg dur]
+  (set e.dot-dmg dmg)
+  (set e.dot-timer dur)
+  (set e.dot-tick 0))
+
+(fn enemie.apply-stun [e frames]
+  (when (> frames e.stun-timer)
+    (set e.stun-timer frames)))
 
 (fn enemie.is-dead? [e]
   (<= e.hp 0))
