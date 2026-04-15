@@ -1,6 +1,5 @@
-;; title:  Rogue-like 2D
+;; title:  Rogue-like 2D - Méta-Sprites (L'Arbre Géant)
 ;; author: Equipe
-;; desc:   Rogue-like en vue du dessus
 ;; script: fennel
 
 ;; -- Module Principal --
