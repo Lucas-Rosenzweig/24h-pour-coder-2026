@@ -55,20 +55,22 @@
     ;; Recalculer le chemin complet toutes les 60 frames (~ 1 sec)
     (when (<= e.path-timer 0)
 
-      (local custom-wall-fn
+      (local custom-walkable-fn
         (fn [px py]
-          (var is-wall (world.wall? px py))
-          ;; Si ce n'est pas un mur classique, on regarde s'il y a un autre ennemi sur cette case
-          (when (not is-wall)
+          ;; On vérifie si la hitbox complète [px, py, size, size] passe
+          (var valid (world.can-move? px py e.size))
+          
+          ;; Vérifier l'évitement des autres monstres
+          (when valid
             (each [_ other (ipairs enemies)]
               (when (and (not= other e)
-                         (>= px other.x) (<= px (+ other.x other.size))
-                         (>= py other.y) (<= py (+ other.y other.size)))
-                (set is-wall true))))
-          is-wall))
+                         ;; AABB classique entre le test et l'autre ennemi
+                         (world.collide? px py e.size other.x other.y other.size))
+                (set valid false))))
+          valid))
 
-      ;; On passe le CENTRE (+4) des entités pour éviter que le coin mathématique déborde sur un mur
-      (set e.path (astar.find-path (+ e.x 4) (+ e.y 4) (+ joueur.x 4) (+ joueur.y 4) custom-wall-fn))
+      ;; On passe la vraie position sans l'offset du centre, puisque on teste la hitbox complète
+      (set e.path (astar.find-path e.x e.y joueur.x joueur.y custom-walkable-fn))
 
       ;; Ajout d'une petite variation aléatoire au timer pour désynchroniser les calculs des monstres
       (set e.path-timer (+ 60 (math.random 0 10))))
