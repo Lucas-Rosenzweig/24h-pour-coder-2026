@@ -23,6 +23,11 @@
 (var room-reward-spawned false)
 (var room-reward-required false)
 
+;; Gestion d'états
+(var game-state :intro) ;; Peut valoir :intro, :menu, ou :game
+(var intro-timer 120)
+(var menu-blink 0)
+
 ;; --- Shop (objets au sol) ---
 (var shop-items [])
 (var shop-msg "")
@@ -258,6 +263,31 @@
   (player.draw-gold-ui joueur)
   (player.draw joueur))
 
+;; --- INTRO & MENU ---
+(fn update-intro []
+  (set intro-timer (- intro-timer 1))
+  ;; Après ~2 secondes le texte disparait, fondu au noir court (-30 frames), puis menu
+  (if (< intro-timer -30)
+      (set game-state :menu)))
+
+(fn draw-intro []
+  (cls 0)
+  (when (> intro-timer 0)
+    (print "LES ZIGOTOS V3" 76 64 12)))
+
+(fn update-menu []
+  ;; Appuyez sur Z (key 26) ou le bouton A de TIC-80 pour jouer
+  (when (or (keyp 26) (btnp 4))
+    (set game-state :game)))
+
+(fn draw-menu []
+  (cls 0)
+  ;; Mettez le nom de votre VRAI jeu ici
+  (print "LE JEU DES ZIGOTOS" 55 40 14)
+  (set menu-blink (+ menu-blink 1))
+  (when (< (% menu-blink 60) 30)
+    (print "Appuyez sur Z pour jouer" 55 90 12)))
+
 ;; Boucle principale
 (fn _G.TIC []
   ;; Initialisation unique
@@ -268,12 +298,24 @@
       (spawn-room-enemies 4))
     (set initialized true))
 
-  ;; Pause du jeu si l'ecran reward est ouvert
-  (if (item.is-open? reward-screen)
-    (item.update reward-screen joueur)
-    (update-game))
+  (if (= game-state :intro)
+      (do
+        (update-intro)
+        (draw-intro))
+        
+      (= game-state :menu)
+      (do
+        (update-menu)
+        (draw-menu))
+        
+      (= game-state :game)
+      (do
+        ;; Pause du jeu si l'ecran reward est ouvert
+        (if (item.is-open? reward-screen)
+            (item.update reward-screen joueur)
+            (update-game))
 
-  ;; Rendu
-  (draw-game)
-  (when (item.is-open? reward-screen)
-    (item.draw reward-screen)))
+        ;; Rendu
+        (draw-game)
+        (when (item.is-open? reward-screen)
+          (item.draw reward-screen)))))
