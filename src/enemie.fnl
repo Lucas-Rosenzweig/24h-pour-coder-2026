@@ -15,7 +15,12 @@
    :stun-timer 0
    :dot-timer 0
    :dot-dmg 0
-   :dot-tick 0})
+   :dot-tick 0
+   ;; Animations
+   :anim-timer (math.random 0 10)
+   :anim-frame 1
+   :direction :down
+   :moving? false})
 
 ;; =========================
 ;; Distance
@@ -42,7 +47,8 @@
 
   ;; Stun processing
   (when (> e.stun-timer 0)
-    (set e.stun-timer (- e.stun-timer 1)))
+    (set e.stun-timer (- e.stun-timer 1))
+    (set e.moving? false))
 
   ;; Mouvement seulement si pas stun
   (when (<= e.stun-timer 0)
@@ -124,7 +130,29 @@
                  (world.can-move? e.x ny e.size)
                  (not (world.collide? e.x ny e.size joueur.x joueur.y joueur.size))
                  (not (hit-other-enemie? e.x ny)))
-        (set e.y ny))))
+        (set e.y ny))
+        
+      ;; Mise à jour état d'animation
+      (let [moving? (or (not= dx 0) (not= dy 0))]
+        (set e.moving? moving?)
+        (when moving?
+          (if (> dx 0) (set e.direction :right)
+              (< dx 0) (set e.direction :left)
+              (> dy 0) (set e.direction :down)
+              (< dy 0) (set e.direction :up)))
+        
+        (set e.anim-timer (+ e.anim-timer 1))
+        (if moving?
+          (do
+            (when (> e.anim-timer 8)
+              (set e.anim-timer 0)
+              (set e.anim-frame (+ e.anim-frame 1))
+              (when (> e.anim-frame 3) (set e.anim-frame 1))))
+          (do
+            (when (> e.anim-timer 20)
+              (set e.anim-timer 0)
+              (set e.anim-frame (+ e.anim-frame 1))
+              (when (> e.anim-frame 2) (set e.anim-frame 1))))))))
 
   ;; cooldown attaque
   (when (> e.attack-timer 0)
@@ -170,9 +198,14 @@
 ;; =========================
 (fn enemie.draw [e]
   (let [x (math.floor e.x)
-        y (math.floor e.y)]
-    (rect x y e.size e.size e.color)
-    (rectb x y e.size e.size 0)
+        y (math.floor e.y)
+        base-spr (if (not e.moving?) 111
+                     (or (= e.direction :right) (= e.direction :down)) 113
+                     (= e.direction :left) 116
+                     119) ;; fallback pour :up
+        final-spr (+ base-spr (- e.anim-frame 1))]
+    
+    (spr final-spr x y 15)
 
     ;; petite barre de vie
     (rect x (- y 3) e.size 2 1)
