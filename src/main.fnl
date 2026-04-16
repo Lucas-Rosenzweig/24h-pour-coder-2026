@@ -15,9 +15,9 @@
 (local lightning-flashes [])
 (local reward-screen (item.new))
 (local pickups [])
-(var pickup-spawn-timer 180)
-(local pickup-spawn-delay 300)
-(local max-pickups 3)
+(local reward-pickup-size 8)
+(var room-reward-spawned false)
+(var room-reward-required false)
 
 (table.insert enemies (enemie.new 50 50))
 (table.insert enemies (enemie.new 180 100))
@@ -32,35 +32,9 @@
        (< (math.abs (- p.x pickup.x)) pickup.size)
        (< (math.abs (- p.y pickup.y)) pickup.size)))
 
-(fn spawn-pickup []
-  (when (< (# pickups) max-pickups)
-    (var attempts 0)
-    (var spawned false)
-    (while (and (< attempts 20) (not spawned))
-      (let [x (* (math.random 1 28) 8)
-            y (+ 20 (* (math.random 1 13) 8))]
-        (set attempts (+ attempts 1))
-        (when (and (not (world.wall? x y))
-                   (not (world.wall? (+ x 7) (+ y 7))))
-          (table.insert pickups {:x x :y y :size 8 :active true})
-          (set spawned true))))))
-
 (fn update-game []
   ;; Mise a jour (inputs + collisions gerees par world)
   (player.update joueur world enemies)
-
-  ;; Spawn aleatoire de pickups avec limite a l'ecran
-  (set pickup-spawn-timer (- pickup-spawn-timer 1))
-  (when (<= pickup-spawn-timer 0)
-    (spawn-pickup)
-    (set pickup-spawn-timer pickup-spawn-delay))
-
-  ;; Ramassage des pickups
-  (for [i (# pickups) 1 -1]
-    (let [pickup (. pickups i)]
-      (when (player-overlap-item? joueur pickup)
-        (table.remove pickups i)
-        (item.open reward-screen joueur))))
 
   ;; Attaque si touche E appuyee
   (when (keyp 5)
@@ -80,12 +54,34 @@
   (when (keyp 26)
     (player.use-utility joueur world))
 
-  ;; Gestion d'ouverture de la porte
-  (when (and (= (# enemies) 0) (not world.door-open))
-    (world.open-door))
+  (for [i (# enemies) 1 -1]
+    (let [e (. enemies i)]
+      (enemie.update e joueur world enemies)
+      (enemie.attack e joueur player.take-damage world)
+      ;; suppression si mort
+      (when (enemie.is-dead? e)
+        (table.remove enemies i))))
 
-  ;; Portes / Transition de carte (uniquement si porte ouverte)
-  (when (world.is-door? joueur.x joueur.y joueur.size)
+  ;; Fin de salle: ouverture de porte + spawn de la recompense devant la sortie.
+  (when (and (= (# enemies) 0) (not room-reward-spawned))
+    (world.open-door)
+    (let [spawn (world.get-door-reward-spawn reward-pickup-size)]
+      (table.insert pickups {:x spawn.x :y spawn.y :size reward-pickup-size :active true}))
+    (set room-reward-spawned true)
+    (set room-reward-required true))
+
+  ;; Ramassage de la recompense de salle (obligatoire avant transition)
+  (for [i (# pickups) 1 -1]
+    (let [pickup (. pickups i)]
+      (when (player-overlap-item? joueur pickup)
+        (table.remove pickups i)
+        (item.open reward-screen joueur)
+        (set room-reward-required false))))
+
+  ;; Portes / Transition de carte (bloquee tant que la recompense n'est pas prise)
+  (when (and (not room-reward-required)
+             (not (item.is-open? reward-screen))
+             (world.is-door? joueur.x joueur.y joueur.size))
     (if (= world.current-map-id 1)
         (world.load-map 2)
         (world.load-map 1))
@@ -98,16 +94,14 @@
     (for [i 1 4]
       (table.insert enemies (enemie.new (* (math.random 10 20) 8) (* (math.random 5 12) 8))))
 
-    ;; Effacer les projectiles et éclairs
+    ;; Effacer les projectiles, éclairs et pickups residuels
     (while (> (# projectiles) 0) (table.remove projectiles 1))
-    (while (> (# lightning-flashes) 0) (table.remove lightning-flashes 1)))
+    (while (> (# lightning-flashes) 0) (table.remove lightning-flashes 1))
+    (while (> (# pickups) 0) (table.remove pickups 1))
 
-  (each [i e (ipairs enemies)]
-    (enemie.update e joueur world enemies)
-    (enemie.attack e joueur player.take-damage world)
-    ;; suppression si mort
-    (when (enemie.is-dead? e)
-      (table.remove enemies i)))
+    ;; Reset etat de salle pour la prochaine room
+    (set room-reward-spawned false)
+    (set room-reward-required false))
 
   ;; Mise a jour des projectiles
   (for [i (# projectiles) 1 -1]

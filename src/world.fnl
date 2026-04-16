@@ -116,6 +116,55 @@
     (when (= (. ligne 29) 2)
       (tset (. map-v lig) 29 44)))) ;; 44 = open door
 
+(fn walkable-rect? [x y size]
+  (and (not (M.wall? x y))
+       (not (M.wall? (+ x (- size 1)) y))
+       (not (M.wall? x (+ y (- size 1))))
+       (not (M.wall? (+ x (- size 1)) (+ y (- size 1))))))
+
+(fn find-safe-fallback-spawn [size]
+  (var found nil)
+  (for [lig 3 13]
+    (for [col 3 27]
+      (when (not found)
+        (let [x (* (- col 1) 8)
+              y (+ 16 (* (- lig 1) 8))]
+          (when (walkable-rect? x y size)
+            (set found {:x x :y y}))))))
+  (or found {:x 120 :y 72}))
+
+;; Retourne un point de spawn pour une récompense devant la porte de sortie.
+;; Le résultat est toujours un point walkable (fallback au centre de la salle).
+(fn M.get-door-reward-spawn [size]
+  (var sum-col 0)
+  (var sum-lig 0)
+  (var count 0)
+  (each [lig ligne (ipairs matrice-active)]
+    (each [col valeur (ipairs ligne)]
+      (when (= valeur 2)
+        (set sum-col (+ sum-col col))
+        (set sum-lig (+ sum-lig lig))
+        (set count (+ count 1)))))
+  (if (> count 0)
+      (let [door-col (// sum-col count)
+            door-lig (/ sum-lig count)
+            door-center-y (+ 16 (* (- door-lig 1) 8) 4)
+            base-y (math.floor (- door-center-y (/ size 2)))
+            base-x (* (- door-col 2) 8)
+            candidates [{:x base-x :y base-y}
+                        {:x (- base-x 8) :y base-y}
+                        {:x (- base-x 16) :y base-y}
+                        {:x base-x :y (- base-y 8)}
+                        {:x base-x :y (+ base-y 8)}]
+            fallback (find-safe-fallback-spawn size)]
+        (var chosen nil)
+        (each [_ candidate (ipairs candidates)]
+          (when (and (not chosen)
+                     (walkable-rect? candidate.x candidate.y size))
+            (set chosen candidate)))
+        (or chosen fallback))
+      (find-safe-fallback-spawn size)))
+
 ;; --- 3. INITIALISATION DES ASSETS ---
 (fn M.init-assets []
   ;; -- Palette --
