@@ -23,6 +23,7 @@
    :i-frames 0
    :spell-cooldown 0
    :sword-flash 0
+   :gold 0
    :sword-hits-left 0
    :sword-hit-due false})
 
@@ -91,6 +92,22 @@
 ;; -- Dessin du sprite joueur (ID 12) --
 (fn player.draw [p]
   (spr 12 p.x p.y 0))
+
+(fn player.add-gold [p amount]
+  (set p.gold (+ p.gold amount)))
+
+(fn player.draw-gold-icon [x y]
+  (circ (+ x 4) (+ y 4) 3 10)
+  (circ (+ x 4) (+ y 4) 1 14)
+  (circ (+ x 4) (+ y 4) 1 15))
+
+(fn player.draw-gold-ui [p]
+  (let [label (tostring p.gold)
+        text-width (* (# label) 6)
+        icon-x (- 240 10 text-width 12)
+        text-x (+ icon-x 11)]
+    (player.draw-gold-icon icon-x 4)
+    (print label text-x 5 12 false 1 true)))
 
 (fn player.take-damage [p dmg]
   (when (<= p.i-frames 0)

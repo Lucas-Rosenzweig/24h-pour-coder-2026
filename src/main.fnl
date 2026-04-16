@@ -18,7 +18,7 @@
 (var pickup-spawn-timer 180)
 (local pickup-spawn-delay 300)
 (local max-pickups 3)
-
+(local reward-screen (item.new))
 (table.insert enemies (enemie.new 50 50))
 (table.insert enemies (enemie.new 180 100))
 (table.insert enemies (enemie.new 180 90))
@@ -44,6 +44,7 @@
                    (not (world.wall? (+ x 7) (+ y 7))))
           (table.insert pickups {:x x :y y :size 8 :active true})
           (set spawned true))))))
+
 
 (fn update-game []
   ;; Mise a jour (inputs + collisions gerees par world)
@@ -85,6 +86,7 @@
     (enemie.attack e joueur player.take-damage world)
     ;; suppression si mort
     (when (enemie.is-dead? e)
+      (player.add-gold joueur (math.random 5 20))
       (table.remove enemies i)))
 
   ;; Mise a jour des projectiles
@@ -149,6 +151,7 @@
       (line f.x1 f.y1 mx my 12)
       (line mx my f.x2 f.y2 12)))
   (player.draw-ui joueur)
+  (player.draw-gold-ui joueur)
   (player.draw joueur))
 
 ;; Boucle principale
