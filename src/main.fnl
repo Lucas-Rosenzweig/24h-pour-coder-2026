@@ -29,7 +29,7 @@
 (fn entity-update [e]
   (if (is-boss? e)
       (boss.update e joueur world enemies player.take-damage)
-      (enemie.update e joueur world enemies)))
+      (enemie.update e joueur world enemies player.take-damage)))
 
 (fn entity-attack [e]
   (if (is-boss? e)
@@ -67,11 +67,20 @@
    :apply-stun entity-apply-stun
    :is-dead? entity-is-dead?})
 
+(fn random-enemy-type []
+  (let [roll (math.random 1 100)]
+    (if (<= roll 40)
+        :grunt
+        (<= roll 70)
+        :laser
+        :kamikaze)))
+
 (fn spawn-room-enemies [count]
   (for [_ 1 count]
     (table.insert enemies
       (enemie.new (* (math.random 10 20) 8)
-                  (* (math.random 5 12) 8)))))
+                  (* (math.random 5 12) 8)
+                  (random-enemy-type)))))
 
 (fn clear-list [xs]
   (while (> (# xs) 0)
