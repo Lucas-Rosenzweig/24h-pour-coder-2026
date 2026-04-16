@@ -263,30 +263,120 @@
   (player.draw-gold-ui joueur)
   (player.draw joueur))
 
+;; --- MOTEUR 3D (MENU & INTRO) ---
+(var global-t 0)
+
+;; Etoiles
+(local stars [])
+(for [i 1 60]
+  (table.insert stars
+    {:x (- (math.random 200) 100)
+     :y (- (math.random 200) 100)
+     :z (math.random 10 200)}))
+
+(fn update-stars []
+  (each [_ s (ipairs stars)]
+    (set s.z (- s.z 1.5))
+    (when (< s.z 1)
+      (set s.z 200)
+      (set s.x (- (math.random 200) 100))
+      (set s.y (- (math.random 200) 100)))))
+
+(fn draw-stars []
+  (each [_ s (ipairs stars)]
+    (let [px (+ 120 (/ (* s.x 100) s.z))
+          py (+ 68 (/ (* s.y 100) s.z))]
+      (when (and (> px 0) (< px 240) (> py 0) (< py 136))
+        (let [col (if (< s.z 50) 15 (< s.z 120) 13 8)] ;; Etoiles: Blanc (15), Cyan (13), Bleu (8)
+          (pix (math.floor px) (math.floor py) col))))))
+
+;; Cube Filaire 3D
+(local cube-verts 
+  [[-1 -1 -1] [ 1 -1 -1] [ 1  1 -1] [-1  1 -1]
+   [-1 -1  1] [ 1 -1  1] [ 1  1  1] [-1  1  1]])
+   
+(local cube-edges
+  [[1 2] [2 3] [3 4] [4 1]
+   [5 6] [6 7] [7 8] [8 5]
+   [1 5] [2 6] [3 7] [4 8]])
+
+(var angle-x 0)
+(var angle-y 0)
+(var angle-z 0)
+
+(fn rotate-3d [x y z ax ay az]
+  (let [sy (math.sin ax) cy (math.cos ax)
+        y1 (- (* y cy) (* z sy))
+        z1 (+ (* y sy) (* z cy))]
+    (let [sp (math.sin ay) cp (math.cos ay)
+          x2 (+ (* x cp) (* z1 sp))
+          z2 (+ (* x (- 0 sp)) (* z1 cp))]
+      (let [sr (math.sin az) cr (math.cos az)
+            x3 (- (* x2 cr) (* y1 sr))
+            y3 (+ (* x2 sr) (* y1 cr))]
+        [x3 y3 z2]))))
+
+(fn draw-wireframe []
+  (set angle-x (+ angle-x 0.02))
+  (set angle-y (+ angle-y 0.03))
+  (set angle-z (+ angle-z 0.01))
+  
+  (local proj-verts [])
+  (each [_ v (ipairs cube-verts)]
+    (let [r (rotate-3d (. v 1) (. v 2) (. v 3) angle-x angle-y angle-z)
+          z (+ (- (. r 3)) 2.5) ;; focal depth
+          scale (/ 45 z)
+          px (+ 120 (* (. r 1) scale))
+          py (+ 68 (* (. r 2) scale))]
+      (table.insert proj-verts [px py z])))
+      
+  (each [_ e (ipairs cube-edges)]
+    (let [v1 (. proj-verts (. e 1))
+          v2 (. proj-verts (. e 2))]
+      (let [col (if (< (. v1 3) 2.5) 11 5)] ;; Cube: Vert Fluo (11) au premier plan, Vert Foret (5) au fond
+        (line (. v1 1) (. v1 2) (. v2 1) (. v2 2) col)))))
+
+;; Texte Animé Sine Wave
+(fn draw-wobbling-text [text cx cy base-color time-var]
+  (let [len (string.len text)
+        width (* len 6)
+        start-x (- cx (/ width 2))]
+    (for [i 1 len]
+      (let [char (string.sub text i i)
+            oy (* (math.sin (+ time-var (* i 0.5))) 4)]
+        (print char (+ start-x (* (- i 1) 6)) (+ cy oy) base-color)))))
+
 ;; --- INTRO & MENU ---
 (fn update-intro []
+  (set global-t (+ global-t 0.05))
+  (update-stars)
   (set intro-timer (- intro-timer 1))
-  ;; Après ~2 secondes le texte disparait, fondu au noir court (-30 frames), puis menu
+  ;; Après 2 secondes le texte disparait, reset des timer, passage au menu
   (if (< intro-timer -30)
       (set game-state :menu)))
 
 (fn draw-intro []
   (cls 0)
+  (draw-stars)
+  (draw-wireframe)
   (when (> intro-timer 0)
-    (print "LES ZIGOTOS V3" 76 64 12)))
+    (draw-wobbling-text "LES ZIGOTOS V3" 120 64 14 global-t)))
 
 (fn update-menu []
+  (set global-t (+ global-t 0.05))
+  (update-stars)
   ;; Appuyez sur Z (key 26) ou le bouton A de TIC-80 pour jouer
   (when (or (keyp 26) (btnp 4))
     (set game-state :game)))
 
 (fn draw-menu []
   (cls 0)
-  ;; Mettez le nom de votre VRAI jeu ici
-  (print "LE JEU DES ZIGOTOS" 55 40 14)
+  (draw-stars)
+  (draw-wireframe)
+  (draw-wobbling-text "LES ZIGOTOS V3" 120 40 14 global-t) ;; Jaune (14)
   (set menu-blink (+ menu-blink 1))
   (when (< (% menu-blink 60) 30)
-    (print "Appuyez sur Z pour jouer" 55 90 12)))
+    (print "Appuyez sur Z pour jouer" 52 100 15))) ;; Blanc (15)
 
 ;; Boucle principale
 (fn _G.TIC []
