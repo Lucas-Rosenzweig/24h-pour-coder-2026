@@ -164,7 +164,9 @@
   (each [_ e (ipairs enemies)]
     (enemie.draw e))
   (each [_ proj (ipairs projectiles)]
-    (circ (math.floor proj.x) (math.floor proj.y) 3 6))
+    (let [elapsed (- 120 proj.lifetime)
+          frame (% (// elapsed 6) 3)]
+      (spr (+ 200 frame) (- (math.floor proj.x) 4) (- (math.floor proj.y) 4) 15)))
   (each [_ pickup (ipairs pickups)]
     (circ (+ pickup.x 4) (+ pickup.y 4) 4 10)
     (circ (+ pickup.x 4) (+ pickup.y 4) 2 12))

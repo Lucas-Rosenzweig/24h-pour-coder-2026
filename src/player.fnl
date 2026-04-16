@@ -25,7 +25,12 @@
    :sword-flash 0
    :gold 0
    :sword-hits-left 0
-   :sword-hit-due false})
+   :sword-hit-due false
+   ;; Animations
+   :anim-timer 0
+   :anim-frame 1
+   :moving? false
+   :direction :down})
 
 ;; -- Logique de déplacement avec collisions --
 (fn player.update [p world enemies]
@@ -86,12 +91,44 @@
 
   ;; I-frames
   (when (> p.i-frames 0)
-    (set p.i-frames (- p.i-frames 1))))
+    (set p.i-frames (- p.i-frames 1)))
+
+  ;; Mise à jour animation
+  (set p.anim-timer (+ p.anim-timer 1))
+  (let [dx (if (btn 2) -1 (if (btn 3) 1 0))
+        dy (if (btn 0) -1 (if (btn 1) 1 0))
+        moving? (or (not= dx 0) (not= dy 0))]
+    (set p.moving? moving?)
+    (when moving?
+      (if (> dx 0) (set p.direction :right)
+          (< dx 0) (set p.direction :left)
+          (> dy 0) (set p.direction :down)
+          (< dy 0) (set p.direction :up)))
+
+    (if moving?
+        ;; Animation de marche -> 3 frames, vitesse 8
+        (do
+          (when (> p.anim-timer 8)
+            (set p.anim-timer 0)
+            (set p.anim-frame (+ p.anim-frame 1))
+            (when (> p.anim-frame 3) (set p.anim-frame 1))))
+        ;; Animation Idle (100, 101) -> 2 frames, vitesse 20
+        (do
+          (when (> p.anim-timer 20)
+            (set p.anim-timer 0)
+            (set p.anim-frame (+ p.anim-frame 1))
+            (when (> p.anim-frame 2) (set p.anim-frame 1)))))))
 
 
-;; -- Dessin du sprite joueur (ID 12) --
+;; -- Dessin du sprite joueur animé --
 (fn player.draw [p]
-  (spr 12 p.x p.y 0))
+  (let [base-spr (if (not p.moving?) 100
+                     (or (= p.direction :right) (= p.direction :down)) 102
+                     (= p.direction :left) 105
+                     108) ;; fallback pour :up
+        final-spr (+ base-spr (- p.anim-frame 1))]
+    (when (or (<= p.i-frames 0) (= (% (// p.i-frames 4) 2) 0))
+      (spr final-spr p.x p.y 15))))
 
 (fn player.add-gold [p amount]
   (set p.gold (+ p.gold amount)))
@@ -112,6 +149,7 @@
 (fn player.take-damage [p dmg]
   (when (<= p.i-frames 0)
     (set p.hp (- p.hp dmg))
+    (set p.i-frames 30)
     (when (< p.hp 0)
       (set p.hp 0))))
 
