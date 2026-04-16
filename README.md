@@ -14,6 +14,24 @@ La progression suit une boucle simple:
 
 Après chaque combat gagné, vous obtenez une carte de récompense pour personnaliser votre partie (attaque, sort ou utilitaire). Le but est de tenir le plus longtemps possible en enchaînant les cycles.
 
+## Lancer le projet
+
+1. Installez [TIC-80](https://tic80.com/create).
+2. Ouvrez un terminal à la racine du projet.
+3. Lancez le jeu avec:
+
+```bash
+tic80 --skip --fs . --cmd="load assets/game.tic & import code src/main.fnl & run"
+```
+
+Si vous êtes déjà dans la console TIC-80, vous pouvez aussi lancer:
+
+```text
+load assets/game.tic
+import code src/main.fnl
+run
+```
+
 ## Comment jouer
 
 - Déplacement: flèches directionnelles
