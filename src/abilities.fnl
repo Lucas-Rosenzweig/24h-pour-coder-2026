@@ -51,24 +51,24 @@
              :aoe 0 :dot 0 :dot-dur 0 :projectiles 1 :spread 0}
       :upgrades
         {1 {:name "Explosion"
-            :desc "Zone de degats a l'impact (+16px)"
+            :desc ""
             :effects {:aoe 16}}
          2 {:name "Brulure"
-            :desc "2 degats/sec pendant 2 sec"
+            :desc ""
             :effects {:dot 2 :dot-dur 120}}
          3 {:name "Triple boule"
-            :desc "3 boules en eventail (15 deg)"
+            :desc ""
             :effects {:projectiles 2 :spread 15}}}}
 
    2 {:name "Foudre"
-      :desc "Frappe instantanee, peut chainer entre ennemis"
+      :desc ""
       :base {:damage 2 :cooldown 50 :chain 0 :stun 0}
       :upgrades
         {1 {:name "Chaine"
-            :desc "Rebondit sur 2 ennemis proches"
+            :desc ""
             :effects {:chain 2}}
          2 {:name "Paralysie"
-            :desc "Etourdit l'ennemi pendant 1 sec"
+            :desc ""
             :effects {:stun 60}}}}})
 
 ;; Calcule les stats effectives du sort equipe
@@ -92,12 +92,12 @@
 (local utilities
   {1 {:name "Dash"
       :type :active
-      :desc "Teleportation 32px dans la direction du mouvement"
+      :desc ""
       :stats {:distance 32 :cooldown 90 :i-frames 10}}
 
    2 {:name "Bouclier d'epines"
       :type :passive
-      :desc "Renvoie 2 degats aux ennemis quand ils frappent le joueur"
+      :desc ""
       :stats {:reflect-damage 2}}})
 
 ;; ============================================================
