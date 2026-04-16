@@ -6,18 +6,15 @@
 (local item (include :item))
 (local player (include :player))
 (local world (include :world))
+(local enemie (include :enemie))
+(local boss (include :boss))
 
 ;; Initialisation
 (var initialized false)
-(local enemie (include :enemie))
 (local enemies [])
 (local projectiles [])
 (local lightning-flashes [])
-(local reward-screen (item.new))
 (local pickups [])
-(var pickup-spawn-timer 180)
-(local pickup-spawn-delay 300)
-(local max-pickups 3)
 (local reward-screen (item.new))
 (local reward-pickup-size 8)
 (var room-reward-spawned false)
@@ -29,6 +26,8 @@
 (var menu-blink 0)
 
 ;; --- Shop (objets au sol) ---
+(local spr-potion 207)
+(local spr-item-upgrade 203)
 (var shop-items [])
 (var shop-msg "")
 (var shop-msg-timer 0)
@@ -36,15 +35,78 @@
 ;; Initialisation du joueur
 (local joueur (player.new))
 
-(fn player-overlap-item? [p pickup]
-  (and pickup.active
-       (< (math.abs (- p.x pickup.x)) pickup.size)
-       (< (math.abs (- p.y pickup.y)) pickup.size)))
+(fn is-boss? [e]
+  (= e.type :boss))
+
+(fn entity-update [e]
+  (if (is-boss? e)
+      (boss.update e joueur world enemies player.take-damage)
+      (enemie.update e joueur world enemies player.take-damage)))
+
+(fn entity-attack [e]
+  (if (is-boss? e)
+      (boss.attack e joueur player.take-damage world)
+      (enemie.attack e joueur player.take-damage world)))
+
+(fn entity-draw [e]
+  (if (is-boss? e)
+      (boss.draw e)
+      (enemie.draw e)))
+
+(fn entity-is-dead? [e]
+  (if (is-boss? e)
+      (boss.is-dead? e)
+      (enemie.is-dead? e)))
+
+(fn entity-take-damage [e dmg]
+  (if (is-boss? e)
+      (boss.take-damage e dmg)
+      (enemie.take-damage e dmg)))
+
+(fn entity-apply-dot [e dmg dur]
+  (if (is-boss? e)
+      (boss.apply-dot e dmg dur)
+      (enemie.apply-dot e dmg dur)))
+
+(fn entity-apply-stun [e frames]
+  (if (is-boss? e)
+      (boss.apply-stun e frames)
+      (enemie.apply-stun e frames)))
+
+(local combat-api
+  {:take-damage entity-take-damage
+   :apply-dot entity-apply-dot
+   :apply-stun entity-apply-stun
+   :is-dead? entity-is-dead?})
+
+(fn random-enemy-type []
+  (let [roll (math.random 1 100)]
+    (if (<= roll 40)
+        :grunt
+        (<= roll 70)
+        :laser
+        :kamikaze)))
 
 (fn spawn-room-enemies [count]
   (for [_ 1 count]
     (let [pos (world.get-random-spawn 8)]
-      (table.insert enemies (enemie.new pos.x pos.y)))))
+      (table.insert enemies (enemie.new pos.x pos.y (random-enemy-type))))))
+
+(fn clear-list [xs]
+  (while (> (# xs) 0)
+    (table.remove xs 1)))
+
+(fn setup-room-encounter []
+  (clear-list enemies)
+  (if (world.is-boss-room)
+      (table.insert enemies (boss.new 112 64))
+      (when (not (world.is-shop?))
+        (spawn-room-enemies 4))))
+
+(fn player-overlap-item? [p pickup]
+  (and pickup.active
+       (< (math.abs (- p.x pickup.x)) pickup.size)
+       (< (math.abs (- p.y pickup.y)) pickup.size)))
 
 (fn shop-set-msg [txt]
   (set shop-msg txt)
@@ -86,11 +148,10 @@
 (fn draw-shop-items []
   (each [_ it (ipairs shop-items)]
     (when it.active
-      (let [col (if (= it.kind :heal) 11 12)
-            label (.. it.cost "g")]
-        ;; "item par terre"
-        (rect it.x it.y it.size it.size col)
-        (rectb it.x it.y it.size it.size 0)
+      (let [label (.. it.cost "g")
+            sid (if (= it.kind :heal) spr-potion spr-item-upgrade)]
+        ;; "item par terre" (sprite)
+        (spr sid it.x it.y 15)
         ;; indication au dessus
         (print "W acheter" (- it.x 6) (- it.y 10) 13 false 1 true)
         ;; prix juste en dessous
@@ -126,40 +187,42 @@
 
   ;; Attaque si touche E appuyee
   (when (and (not (world.is-shop?)) (keyp 5))
-    (player.attack joueur enemies enemie))
+    (player.attack joueur enemies combat-api))
 
-  ;; Sort si touche A appuyee
   ;; Hit épée déclenché à la fin de chaque sweep
   (when joueur.sword-hit-due
     (set joueur.sword-hit-due false)
-    (player.do-sword-hit joueur enemies enemie))
+    (player.do-sword-hit joueur enemies combat-api))
 
   ;; Sort si touche A appuyée (keyp 1)
   (when (and (not (world.is-shop?)) (keyp 1))
-    (player.spell-attack joueur enemies enemie projectiles lightning-flashes))
+    (player.spell-attack joueur enemies combat-api projectiles lightning-flashes))
 
   ;; Utilitaire actif si touche Z appuyée (keyp 26)
   (when (and (not (world.is-shop?)) (keyp 26))
     (player.use-utility joueur world))
 
+  ;; Mise a jour IA et suppression des morts (pas pendant le shop)
   (when (not (world.is-shop?))
-    (each [i e (ipairs enemies)]
-      (enemie.update e joueur world enemies)
-      (enemie.attack e joueur player.take-damage world)
-      ;; suppression si mort
-      (when (enemie.is-dead? e)
-        (player.add-gold joueur (math.random 5 20))
-        (table.remove enemies i))))
+    (for [i (# enemies) 1 -1]
+      (let [e (. enemies i)]
+        (entity-update e)
+        (entity-attack e)
+        (when (entity-is-dead? e)
+          (player.add-gold joueur (if (is-boss? e) 80 (math.random 5 20)))
+          (table.remove enemies i)))))
 
   ;; Fin de salle: ouverture de porte + spawn de la recompense devant la sortie.
-  (when (and (not (world.is-shop?)) (= (# enemies) 0) (not room-reward-spawned))
+  (when (and (not (world.is-shop?))
+             (= (# enemies) 0)
+             (not room-reward-spawned))
     (world.open-door)
     (let [spawn (world.get-door-reward-spawn reward-pickup-size)]
       (table.insert pickups {:x spawn.x :y spawn.y :size reward-pickup-size :active true}))
     (set room-reward-spawned true)
     (set room-reward-required true))
 
-  ;; Ramassage de la recompense de salle (obligatoire avant transition)
+  ;; Ramassage de la recompense de salle
   (for [i (# pickups) 1 -1]
     (let [pickup (. pickups i)]
       (when (player-overlap-item? joueur pickup)
@@ -167,22 +230,24 @@
         (item.open reward-screen joueur)
         (set room-reward-required false))))
 
-  ;; Portes / Transition de carte (bloquee tant que la recompense n'est pas prise)
-  (when (world.is-door? joueur.x joueur.y joueur.size)
+  ;; Portes / Transition de carte
+  ;; En boss room MVP, on ne transitionne pas : drop de reward locale uniquement.
+  (when (and (not (world.is-boss-room))
+             (not room-reward-required)
+             (world.is-door? joueur.x joueur.y joueur.size))
     (world.load-next-room)
-    
+
     ;; Téléportation à gauche
     (set joueur.x 24)
     (set joueur.y 64)
 
-    ;; Génération de nouveaux ennemis pour la nouvelle salle (pas de combat dans le shop)
-    (when (not (world.is-shop?))
-      (spawn-room-enemies 4))
-
     ;; Effacer les projectiles, éclairs et pickups residuels
-    (while (> (# projectiles) 0) (table.remove projectiles 1))
-    (while (> (# lightning-flashes) 0) (table.remove lightning-flashes 1))
-    (while (> (# pickups) 0) (table.remove pickups 1))
+    (clear-list projectiles)
+    (clear-list lightning-flashes)
+    (clear-list pickups)
+
+    ;; Génération des entités de la nouvelle salle
+    (setup-room-encounter)
 
     ;; Reset etat de salle pour la prochaine room
     (set room-reward-spawned false)
@@ -193,7 +258,7 @@
     (when (world.is-shop?)
       (init-shop-items)))
 
-  ;; Mise a jour des projectiles
+  ;; Mise a jour des projectiles joueur
   (when (not (world.is-shop?))
     (for [i (# projectiles) 1 -1]
       (let [proj (. projectiles i)]
@@ -206,14 +271,14 @@
           (set proj.alive false))
         (when proj.alive
           (each [_ e (ipairs enemies)]
-            (when (and proj.alive (not (enemie.is-dead? e)))
+            (when (and proj.alive (not (entity-is-dead? e)))
               (let [dx (- e.x proj.x)
                     dy (- e.y proj.y)
                     dist (math.sqrt (+ (* dx dx) (* dy dy)))]
                 (when (< dist (+ proj.radius (/ e.size 2)))
-                  (enemie.take-damage e proj.damage)
+                  (entity-take-damage e proj.damage)
                   (when (> proj.dot 0)
-                    (enemie.apply-dot e proj.dot proj.dot-dur))
+                    (entity-apply-dot e proj.dot proj.dot-dur))
                   (when (> proj.aoe 0)
                     (each [_ e2 (ipairs enemies)]
                       (when (not= e2 e)
@@ -221,9 +286,9 @@
                               ay (- e2.y proj.y)
                               adist (math.sqrt (+ (* ax ax) (* ay ay)))]
                           (when (< adist proj.aoe)
-                            (enemie.take-damage e2 proj.damage)
+                            (entity-take-damage e2 proj.damage)
                             (when (> proj.dot 0)
-                              (enemie.apply-dot e2 proj.dot proj.dot-dur)))))))
+                              (entity-apply-dot e2 proj.dot proj.dot-dur)))))))
                   (set proj.alive false))))))
         (when (not proj.alive)
           (table.remove projectiles i)))))
@@ -239,18 +304,19 @@
   (cls 0)
   (world.draw)
   (each [_ e (ipairs enemies)]
-    (enemie.draw e))
+    (entity-draw e))
   (each [_ proj (ipairs projectiles)]
     (let [elapsed (- 120 proj.lifetime)
-          frame (% (// elapsed 6) 3)]
-      (spr (+ 200 frame) (- (math.floor proj.x) 4) (- (math.floor proj.y) 4) 15)))
+          frame (% (// elapsed 6) 3)
+          angle (math.atan2 proj.vy proj.vx)
+          rot (% (+ (math.floor (+ 0.5 (/ (* angle 2) math.pi))) 4) 4)]
+      (spr (+ 200 frame) (- (math.floor proj.x) 4) (- (math.floor proj.y) 4) 15 1 0 rot)))
   (each [_ pickup (ipairs pickups)]
-    (circ (+ pickup.x 4) (+ pickup.y 4) 4 10)
-    (circ (+ pickup.x 4) (+ pickup.y 4) 2 12))
-  ;; Dessin des flashs eclair
+    (spr spr-item-upgrade pickup.x pickup.y 15))
   ;; Cône d'attaque épée
   (when (> joueur.sword-flash 0)
     (player.draw-attack-cone joueur))
+
   ;; Dessin des flashs éclair (zigzag en blanc)
   (each [_ f (ipairs lightning-flashes)]
     (let [mx (+ (/ (+ f.x1 f.x2) 2) f.jx)
@@ -383,9 +449,7 @@
   ;; Initialisation unique
   (when (not initialized)
     (world.init-assets)
-    ;; Ennemis uniquement si salle de combat au départ
-    (when (not (world.is-shop?))
-      (spawn-room-enemies 4))
+    (setup-room-encounter)
     (set initialized true))
 
   (if (= game-state :intro)

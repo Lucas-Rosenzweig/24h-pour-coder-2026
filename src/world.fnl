@@ -129,6 +129,41 @@
   [23 22  6  6  6  6  6  6  6  6  6  6  6  6  6  6  6  6  6  6  6  6  6  6  6  6  6  6  19 18]
   [21 20  7  7  7  7  7  7  7  7  7  7  7  7  7  7  7  7  7  7  7  7  7  7  7  7  7  7  17 16]]})
 
+(local boss-map
+  {:kind :boss
+   :c [
+  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1]
+  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1]
+  [1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1]
+  [1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1]
+  [1 1 0 0 0 0 0 1 1 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 0 1 1]
+  [1 1 0 0 0 0 0 1 1 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 0 1 1]
+  [1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1]
+  [1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2 1]
+  [1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2 1]
+  [1 1 0 0 0 0 0 1 1 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 0 1 1]
+  [1 1 0 0 0 0 0 1 1 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 0 1 1]
+  [1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1]
+  [1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1]
+  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1]
+  [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1]]
+   :v [
+  [11 10  5  5  5  5  5  5  5  5  5  5  5  5  5  5  5  5  5  5  5  5  5  5  5  5  5  5  15 14]
+  [ 9  8  4  4  4  4  4  4  4  4  4  4  4  4  4  4  4  4  4  4  4  4  4  4  4  4  4  4  13 12]
+  [ 1  0 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25  2  3]
+  [ 1  0 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25  2  3]
+  [ 1  0 25 25 25 25 25 27 29 25 25 25 25 25 25 25 25 25 25 25 25 27 29 25 25 25 25 25  2  3]
+  [ 1  0 25 25 25 25 25 28 30 25 25 25 25 25 25 25 25 25 25 25 25 28 30 25 25 25 25 25  2  3]
+  [ 1  0 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25  2  3]
+  [ 1  0 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 45  3]
+  [ 1  0 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 45  3]
+  [ 1  0 25 25 25 25 25 27 29 25 25 25 25 25 25 25 25 25 25 25 25 27 29 25 25 25 25 25  2  3]
+  [ 1  0 25 25 25 25 25 28 30 25 25 25 25 25 25 25 25 25 25 25 25 28 30 25 25 25 25 25  2  3]
+  [ 1  0 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25  2  3]
+  [ 1  0 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25 25  2  3]
+  [23 22  6  6  6  6  6  6  6  6  6  6  6  6  6  6  6  6  6  6  6  6  6  6  6  6  6  6  19 18]
+  [21 20  7  7  7  7  7  7  7  7  7  7  7  7  7  7  7  7  7  7  7  7  7  7  7  7  7  7  17 16]]})
+
 (var map-v [])
 (var matrice-active (. map-pool 1 :c))
 (set M.current-map-id 1)
@@ -152,6 +187,9 @@
 (fn M.is-shop? []
   (= M.current-map-kind :shop))
 
+(fn M.is-boss-room []
+  (= M.current-map-kind :boss))
+
 (fn M.load-random-map []
   (var next-id M.current-map-id)
   ;; Si on a plus d'1 map, évite de tirer la même map deux fois d'affilée
@@ -161,9 +199,9 @@
       (set next-id 1))
   (M.load-map next-id))
 
-	(fn M.construire-map []
-	  (set M.rooms-since-shop 0)
-	  (M.load-random-map))
+(fn M.construire-map []
+  (set M.rooms-since-shop 0)
+  (M.load-random-map))
 
 	(fn M.load-shop-map []
 	  (set M.current-map-id -1)
@@ -455,10 +493,10 @@
       (M.design-spr 119 "FF1111FFF1CCCC1F1CCCCCC11BCCCCB11BBBCBB11B1BBBB111F1B1B1FFFF1F1F")
       ;; 2
       (M.design-spr 120 "FFFFFFFFFF1111FFF1CCCC1F1CCCCCC11CBCCCC11BBBCBB11B1BBBB1F1F1B1BF")
-  ;; ITEM
-    ;; BOULE DE FEU
-      ;; 1
-      (M.design-spr 200 "FFFFFFFFF88888FF8AAAAA8FFF8A99A88A9999A8888AAA8FFFF888FFFFFFFFFF")
+	  ;; ITEM
+	    ;; BOULE DE FEU
+	      ;; 1
+	      (M.design-spr 200 "FFFFFFFFF88888FF8AAAAA8FFF8A99A88A9999A8888AAA8FFFF888FFFFFFFFFF")
       ;; 2
       (M.design-spr 201 "FFFFFFFFFFF888FF888AAA8F8A9999A8FF8A99A88AAAAA8FF88888FFFFFFFFFF")
       ;; 3
@@ -467,12 +505,12 @@
       (M.design-spr 203 "FFFFFF66FFFFF667FFFF667F9AF667FFF9667FFFF227FFFF1229AFFF91FF9FFF")
     ;; FROUDRE
       (M.design-spr 204 "FFFF99FFFFF996FFFF996FFFF999FFFFF99999FFFFF996FFFF996FFFF99FFFFF")
-    ;; DASH
-      (M.design-spr 205 "FFFFFFFFFFF444FFFF44446FFFFFF46F4446F44FF446F4FFFF44FFFFFFF4FFFF")
-    ;; GOLD
-      (M.design-spr 206 "FF1111FFF199991F19996991199966911999669119996991F199991FFF1111FF")
-    ;; POTION VIE
-      (M.design-spr 207 "FFF22FFFFF6226FFFFF66FFFFF6666FFF6FFFF6F6BBBBBB66BBBBBB6F666666F")
+	    ;; DASH
+	      (M.design-spr 205 "FFFFFFFFFFF444FFFF44446FFFFFF46F4446F44FF446F4FFFF44FFFFFFF4FFFF")
+	    ;; GOLD
+	      (M.design-spr 206 "FF1111FFF199991F19996991199966911999669119996991F199991FFF1111FF")
+	    ;; POTION VIE
+	      (M.design-spr 207 "FFF22FFFFF6226FFFFF66FFFFF6666FFF6FFFF6F6BBBBBB66BBBBBB6F666666F")
     ;; PLAYER DOWN
       (M.design-spr 208 "FFFF111FF111BB511667BB5117674B51156777B1155777B1156747511711111F")
     ;; SHIELD

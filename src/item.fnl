@@ -18,6 +18,14 @@
 (fn reward-desc [reward]
   (or reward.data.desc ""))
 
+(fn reward-icon-spr [reward]
+  (match reward.kind
+    :sword-upgrade 203
+    :spell (if (= reward.id 1) 200 204)
+    :spell-upgrade (if (= reward.spell-id 1) 200 204)
+    :utility (if (= reward.id 1) 205 209)
+    _ nil))
+
 (fn build-choices [p]
   (let [choices []
         seen {}]
@@ -64,10 +72,13 @@
 (fn item.draw-card [reward x y w h selected?]
   (let [bg (if selected? 6 1)
         border (if selected? 12 13)
-        title-color (if selected? 12 6)]
+        title-color (if selected? 12 6)
+        icon (reward-icon-spr reward)]
     (rect x y w h bg)
     (rectb x y w h border)
     (print (reward-kind-label reward) (+ x 5) (+ y 6) title-color false 1 true)
+    (when icon
+      (spr icon (+ x (- w 14)) (+ y 6) 15))
     (print reward.data.name (+ x 5) (+ y 18) 12 false 1 true)
     (print (reward-desc reward) (+ x 5) (+ y 32) 13 false 1 true)))
 

@@ -22,6 +22,7 @@
    :utility-cooldown 0
    :i-frames 0
    :spell-cooldown 0
+   :sword-cooldown 0
    :sword-flash 0
    :gold 0
    :sword-hits-left 0
@@ -85,6 +86,10 @@
   (when (> p.spell-cooldown 0)
     (set p.spell-cooldown (- p.spell-cooldown 1)))
 
+  ;; Cooldown épée
+  (when (> p.sword-cooldown 0)
+    (set p.sword-cooldown (- p.sword-cooldown 1)))
+
   ;; Cooldown utilitaire
   (when (> p.utility-cooldown 0)
     (set p.utility-cooldown (- p.utility-cooldown 1)))
@@ -122,11 +127,12 @@
 
 ;; -- Dessin du sprite joueur animé --
 (fn player.draw [p]
-  (let [base-spr (if (not p.moving?) 100
-                     (or (= p.direction :right) (= p.direction :down)) 102
+  (let [base-spr (if (or (= p.direction :right) (= p.direction :down)) 102
                      (= p.direction :left) 105
                      108) ;; fallback pour :up
-        final-spr (+ base-spr (- p.anim-frame 1))]
+        final-spr (if p.moving?
+                      (+ base-spr (- p.anim-frame 1))
+                      base-spr)]
     (when (or (<= p.i-frames 0) (= (% (// p.i-frames 4) 2) 0))
       (spr final-spr p.x p.y 15))))
 
@@ -134,9 +140,7 @@
   (set p.gold (+ p.gold amount)))
 
 (fn player.draw-gold-icon [x y]
-  (circ (+ x 4) (+ y 4) 3 10)
-  (circ (+ x 4) (+ y 4) 1 14)
-  (circ (+ x 4) (+ y 4) 1 15))
+  (spr 206 x y 15))
 
 (fn player.draw-gold-ui [p]
   (let [label (tostring p.gold)
@@ -162,23 +166,23 @@
   ;; === Slot Attack (épée — toujours équipé) ===
   (rect  60 2 12 12 0)
   (rectb 60 2 12 12 12)
-  (spr 10 62 4 0)
+  (spr 203 62 4 15)
 
   ;; === Slot Spell ===
   (let [has-spell (not= p.id-spell-upgrades.id nil)
-        spell-sprite (if (= p.id-spell-upgrades.id 1) 10 11)]
+        spell-sprite (if (= p.id-spell-upgrades.id 1) 200 204)]
     (rect  74 2 12 12 0)
     (rectb 74 2 12 12 (if has-spell 12 13))
     (when has-spell
-      (spr spell-sprite 76 4 0)))
+      (spr spell-sprite 76 4 15)))
 
   ;; === Slot Utility ===
   (let [has-util (not= p.id-utility -1)
-        util-sprite (if (= p.id-utility 1) 10 11)]
+        util-sprite (if (= p.id-utility 1) 205 209)]
     (rect  88 2 12 12 0)
     (rectb 88 2 12 12 (if has-util 12 13))
     (when has-util
-      (spr util-sprite 90 4 0))))
+      (spr util-sprite 90 4 15))))
 
 (fn player.heal [p amount]
   (set p.hp (+ p.hp amount))
@@ -303,8 +307,10 @@
     (each [_ e (ipairs enemies)]
       (let [dx (- (+ e.x (/ e.size 2)) cx)
             dy (- (+ e.y (/ e.size 2)) cy)
-            dist (math.sqrt (+ (* dx dx) (* dy dy)))]
-        (when (< dist stats.range)
+            dist (math.sqrt (+ (* dx dx) (* dy dy)))
+            ;; Compense la différence de gabarit: un boss 16x16 ne doit pas devenir intouchable au cac.
+            target-reach (+ stats.range (math.max 0 (/ (- e.size p.size) 2)))]
+        (when (<= dist target-reach)
           (let [angle-to-enemy (math.atan2 dy dx)
                 diff (math.abs (- angle-to-enemy facing))
                 norm-diff (if (> diff math.pi) (- (* 2 math.pi) diff) diff)]
@@ -314,8 +320,10 @@
 ;; Lance l'animation — les dégâts sont appliqués à la fin de chaque sweep
 (fn player.attack [p enemies enemie]
   (let [stats (abilities.compute-sword-stats p.id-sword-upgrades)]
-    (set p.sword-flash 8)
-    (set p.sword-hits-left stats.hits)))
+    (when (<= p.sword-cooldown 0)
+      (set p.sword-flash 8)
+      (set p.sword-hits-left stats.hits)
+      (set p.sword-cooldown stats.cooldown))))
 
 ;; Attaque de sort (ex: boule de feu, foudre)
 (fn player.spell-attack [p enemies enemie projectiles lightning-flashes]
@@ -412,4 +420,3 @@
                   (set chains-left 0))))))))))
 
 player
-
