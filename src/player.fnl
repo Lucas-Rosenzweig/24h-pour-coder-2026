@@ -189,10 +189,24 @@
         (when (= p.id-utility 1)
           (let [facing (or p.facing-angle 0)
                 dist util.stats.distance
-                nx (+ p.x (* dist (math.cos facing)))
-                ny (+ p.y (* dist (math.sin facing)))]
-            (set p.x (math.max 0 (math.min nx (- 240 p.size))))
-            (set p.y (math.max 20 (math.min ny (- 136 p.size))))
+                dx (math.cos facing)
+                dy (math.sin facing)
+                ;; Cherche la position la plus loin possible sans entrer dans un mur
+                (safe-x safe-y)
+                (do
+                  (var bx p.x)
+                  (var by p.y)
+                  (var i 1)
+                  (while (<= i dist)
+                    (let [tx (math.max 0 (math.min (+ p.x (* i dx)) (- 240 p.size)))
+                          ty (math.max 20 (math.min (+ p.y (* i dy)) (- 136 p.size)))]
+                      (if (world.can-move? tx ty p.size)
+                        (do (set bx tx) (set by ty))
+                        (set i (+ dist 1))))
+                    (set i (+ i 1)))
+                  (values bx by))]
+            (set p.x safe-x)
+            (set p.y safe-y)
             (set p.i-frames util.stats.i-frames)
             (set p.utility-cooldown util.stats.cooldown)))))))
 
