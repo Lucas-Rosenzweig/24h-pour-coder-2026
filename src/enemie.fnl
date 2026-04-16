@@ -208,21 +208,49 @@
     (when hit-player
       (take-damage joueur LASER-DAMAGE))))
 
+(fn track-movement [e prev-x prev-y]
+  (let [dx (- e.x prev-x)
+        dy (- e.y prev-y)
+        moving? (or (not= dx 0) (not= dy 0))]
+    (set e.moving? moving?)
+    (when moving?
+      (if (> (math.abs dx) (math.abs dy))
+          (if (> dx 0) (set e.direction :right) (set e.direction :left))
+          (> dy 0) (set e.direction :down)
+          (< dy 0) (set e.direction :up)))))
+
+(fn tick-anim-2 [e]
+  (set e.anim-timer (+ (or e.anim-timer 0) 1))
+  (let [threshold (if e.moving? 8 20)]
+    (when (> e.anim-timer threshold)
+      (set e.anim-timer 0)
+      (set e.anim-frame (if (= e.anim-frame 1) 2 1)))))
+
 (fn update-laser [e joueur world enemies take-damage]
   (when (> e.laser-flash 0)
     (set e.laser-flash (- e.laser-flash 1)))
 
-  (if (> e.laser-windup 0)
-      (do
-        (set e.laser-windup (- e.laser-windup 1))
-        (when (<= e.laser-windup 0)
-          (fire-laser e joueur world take-damage)
-          (set e.laser-cooldown LASER-COOLDOWN)))
-      (do
-        (move-with-path e joueur world enemies)
-        (set e.laser-cooldown (- e.laser-cooldown 1))
-        (when (<= e.laser-cooldown 0)
-          (begin-laser-windup e joueur world)))))
+  (let [prev-x e.x
+        prev-y e.y]
+    (if (> e.laser-windup 0)
+        (do
+          (set e.moving? false)
+          ;; Orienter le tireur vers le joueur pendant le windup
+          (if (> (math.abs e.laser-dir-x) (math.abs e.laser-dir-y))
+              (if (> e.laser-dir-x 0) (set e.direction :right) (set e.direction :left))
+              (> e.laser-dir-y 0) (set e.direction :down)
+              (< e.laser-dir-y 0) (set e.direction :up))
+          (set e.laser-windup (- e.laser-windup 1))
+          (when (<= e.laser-windup 0)
+            (fire-laser e joueur world take-damage)
+            (set e.laser-cooldown LASER-COOLDOWN)))
+        (do
+          (move-with-path e joueur world enemies)
+          (track-movement e prev-x prev-y)
+          (set e.laser-cooldown (- e.laser-cooldown 1))
+          (when (<= e.laser-cooldown 0)
+            (begin-laser-windup e joueur world)))))
+  (tick-anim-2 e))
 
 (fn in-kamikaze-radius? [e joueur]
   (let [dx (- (+ joueur.x (/ joueur.size 2)) (center-x e))
@@ -231,9 +259,12 @@
     (<= dist (+ KAMIKAZE-EXPLOSION-RADIUS (/ joueur.size 2)))))
 
 (fn update-kamikaze [e joueur world enemies take-damage]
+  (set e.moving? false)
   (if (= e.kami-state :chase)
-      (do
+      (let [prev-x e.x
+            prev-y e.y]
         (move-with-path e joueur world enemies)
+        (track-movement e prev-x prev-y)
         (when (<= (enemie.distance e joueur) KAMIKAZE-TRIGGER-DIST)
           (set e.kami-state :arming)
           (set e.kami-arming-timer KAMIKAZE-ARMING-TIME)
@@ -253,7 +284,8 @@
             (take-damage joueur KAMIKAZE-EXPLOSION-DAMAGE)))
         (set e.kami-explosion-timer (- e.kami-explosion-timer 1))
         (when (<= e.kami-explosion-timer 0)
-          (set e.hp 0)))))
+          (set e.hp 0))))
+  (tick-anim-2 e))
 
 ;; =========================
 ;; Création d'un ennemi
@@ -408,14 +440,22 @@
   (let [x (math.floor e.x)
         y (math.floor e.y)]
     (if (= e.type :laser)
-        (do
+        (let [f (or e.anim-frame 1)
+              sprite (if (not e.moving?) 191
+                         (= e.direction :right) (if (= f 1) 192 193)
+                         (= e.direction :left)  (if (= f 1) 195 196)
+                         (if (= f 1) 198 199))]
           (draw-laser-telegraph e)
-          (spr LASER-SPRITE-ID x y 0)
+          (spr sprite x y 15)
           (draw-health e x y))
         (= e.type :kamikaze)
-        (do
+        (let [f (or e.anim-frame 1)
+              sprite (if (not e.moving?) (if (= f 1) 181 182)
+                         (= e.direction :right) (if (= f 1) 183 184)
+                         (= e.direction :left)  (if (= f 1) 186 187)
+                         (if (= f 1) 189 190))]
           (draw-kamikaze-telegraph e)
-          (spr KAMIKAZE-SPRITE-ID x y 0)
+          (spr sprite x y 15)
           (draw-health e x y))
         ;; grunt : sprite animé
         (let [base-spr (if (not e.moving?) 111
