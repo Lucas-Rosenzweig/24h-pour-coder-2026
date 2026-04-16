@@ -28,9 +28,8 @@
 
 (fn spawn-room-enemies [count]
   (for [_ 1 count]
-    (table.insert enemies
-      (enemie.new (* (math.random 10 20) 8)
-                  (* (math.random 5 12) 8)))))
+    (let [pos (world.get-random-spawn 8)]
+      (table.insert enemies (enemie.new pos.x pos.y)))))
 
 (fn player-overlap-item? [p pickup]
   (and pickup.active

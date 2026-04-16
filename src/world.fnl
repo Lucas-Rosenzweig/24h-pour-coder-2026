@@ -247,6 +247,18 @@
         (or chosen fallback))
       (find-safe-fallback-spawn size)))
 
+;; Retourne un point de spawn aléatoire valide (walkable) pour une certaine taille.
+(fn M.get-random-spawn [size]
+  (var found nil)
+  (var attempts 0)
+  (while (and (not found) (< attempts 50))
+    (let [x (math.random 16 224)
+          y (math.random 32 120)]
+      (when (walkable-rect? x y size)
+        (set found {:x x :y y})))
+    (set attempts (+ attempts 1)))
+  (or found (find-safe-fallback-spawn size)))
+
 ;; --- 3. INITIALISATION DES ASSETS ---
 (fn M.init-assets []
   ;; -- Palette --
