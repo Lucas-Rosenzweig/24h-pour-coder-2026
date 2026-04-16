@@ -232,10 +232,9 @@
 
   ;; Portes / Transition de carte
   ;; En boss room MVP, on ne transitionne pas : drop de reward locale uniquement.
-  (when (and (not (world.is-boss-room))
-             (not room-reward-required)
-             (world.is-door? joueur.x joueur.y joueur.size))
-    (world.load-next-room)
+  (when (and (not room-reward-required)
+           (world.is-door? joueur.x joueur.y joueur.size))
+  (world.load-next-room)
 
     ;; Téléportation à gauche
     (set joueur.x 24)
