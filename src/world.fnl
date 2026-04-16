@@ -416,16 +416,25 @@
       (find-safe-fallback-spawn size)))
 
 ;; Retourne un point de spawn aléatoire valide (walkable) pour une certaine taille.
-(fn M.get-random-spawn [size]
+;; Optionnel: évite une zone circulaire (avoid-x, avoid-y) avec un rayon min-dist.
+(fn M.get-random-spawn [size avoid-x avoid-y min-dist]
   (var found nil)
   (var attempts 0)
-  (while (and (not found) (< attempts 50))
-    (let [x (math.random 16 224)
-          y (math.random 32 120)]
-      (when (walkable-rect? x y size)
-        (set found {:x x :y y})))
-    (set attempts (+ attempts 1)))
-  (or found (find-safe-fallback-spawn size)))
+  (let [md-sq (if min-dist (* min-dist min-dist) 1600)] ;; 40 pixels par défaut
+    (while (and (not found) (< attempts 50))
+      (let [x (math.random 16 224)
+            y (math.random 32 120)]
+        (var dist-ok true)
+        (when (and avoid-x avoid-y)
+          (let [dx (- x avoid-x)
+                dy (- y avoid-y)
+                d-sq (+ (* dx dx) (* dy dy))]
+            (if (< d-sq md-sq) (set dist-ok false))))
+            
+        (when (and dist-ok (walkable-rect? x y size))
+          (set found {:x x :y y})))
+      (set attempts (+ attempts 1)))
+    (or found (find-safe-fallback-spawn size))))
 
 ;; --- 3. INITIALISATION DES ASSETS ---
 (fn M.init-assets []

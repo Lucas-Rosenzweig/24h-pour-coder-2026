@@ -89,7 +89,7 @@
 
 (fn spawn-room-enemies [count]
   (for [_ 1 count]
-    (let [pos (world.get-random-spawn 8)]
+    (let [pos (world.get-random-spawn 8 joueur.x joueur.y 60)]
       (table.insert enemies (enemie.new pos.x pos.y (random-enemy-type))))))
 
 (fn clear-list [xs]
