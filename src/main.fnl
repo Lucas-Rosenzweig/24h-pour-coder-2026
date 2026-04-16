@@ -302,8 +302,10 @@
     (entity-draw e))
   (each [_ proj (ipairs projectiles)]
     (let [elapsed (- 120 proj.lifetime)
-          frame (% (// elapsed 6) 3)]
-      (spr (+ 200 frame) (- (math.floor proj.x) 4) (- (math.floor proj.y) 4) 15)))
+          frame (% (// elapsed 6) 3)
+          angle (math.atan2 proj.vy proj.vx)
+          rot (% (+ (math.floor (+ 0.5 (/ (* angle 2) math.pi))) 4) 4)]
+      (spr (+ 200 frame) (- (math.floor proj.x) 4) (- (math.floor proj.y) 4) 15 1 0 rot)))
   (each [_ pickup (ipairs pickups)]
     (spr spr-item-upgrade pickup.x pickup.y 15))
   ;; Cône d'attaque épée

@@ -127,11 +127,12 @@
 
 ;; -- Dessin du sprite joueur animé --
 (fn player.draw [p]
-  (let [base-spr (if (not p.moving?) 100
-                     (or (= p.direction :right) (= p.direction :down)) 102
+  (let [base-spr (if (or (= p.direction :right) (= p.direction :down)) 102
                      (= p.direction :left) 105
                      108) ;; fallback pour :up
-        final-spr (+ base-spr (- p.anim-frame 1))]
+        final-spr (if p.moving?
+                      (+ base-spr (- p.anim-frame 1))
+                      base-spr)]
     (when (or (<= p.i-frames 0) (= (% (// p.i-frames 4) 2) 0))
       (spr final-spr p.x p.y 15))))
 
@@ -165,23 +166,23 @@
   ;; === Slot Attack (épée — toujours équipé) ===
   (rect  60 2 12 12 0)
   (rectb 60 2 12 12 12)
-  (spr 10 62 4 15)
+  (spr 203 62 4 15)
 
   ;; === Slot Spell ===
   (let [has-spell (not= p.id-spell-upgrades.id nil)
-        spell-sprite (if (= p.id-spell-upgrades.id 1) 10 11)]
+        spell-sprite (if (= p.id-spell-upgrades.id 1) 200 204)]
     (rect  74 2 12 12 0)
     (rectb 74 2 12 12 (if has-spell 12 13))
     (when has-spell
-      (spr spell-sprite 76 4 0)))
+      (spr spell-sprite 76 4 15)))
 
   ;; === Slot Utility ===
   (let [has-util (not= p.id-utility -1)
-        util-sprite (if (= p.id-utility 1) 10 11)]
+        util-sprite (if (= p.id-utility 1) 205 209)]
     (rect  88 2 12 12 0)
     (rectb 88 2 12 12 (if has-util 12 13))
     (when has-util
-      (spr util-sprite 90 4 0))))
+      (spr util-sprite 90 4 15))))
 
 (fn player.heal [p amount]
   (set p.hp (+ p.hp amount))
