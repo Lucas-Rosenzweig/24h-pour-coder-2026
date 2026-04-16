@@ -127,12 +127,11 @@
 
 ;; -- Dessin du sprite joueur animé --
 (fn player.draw [p]
-  (let [base-spr (if (or (= p.direction :right) (= p.direction :down)) 102
+  (let [base-spr (if (not p.moving?) 100
+                     (or (= p.direction :right) (= p.direction :down)) 102
                      (= p.direction :left) 105
                      108) ;; fallback pour :up
-        final-spr (if p.moving?
-                      (+ base-spr (- p.anim-frame 1))
-                      base-spr)]
+        final-spr (+ base-spr (- p.anim-frame 1))]
     (when (or (<= p.i-frames 0) (= (% (// p.i-frames 4) 2) 0))
       (spr final-spr p.x p.y 15))))
 
