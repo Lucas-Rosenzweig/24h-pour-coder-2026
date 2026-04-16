@@ -365,7 +365,7 @@
   (each [lig ligne (ipairs matrice-active)]
     (each [col val (ipairs ligne)]
       (when (= val 2)
-        (tset (. map-v lig) col 44)))))
+        (tset (. map-v lig) col 24)))))
 
 (fn walkable-rect? [x y size]
   (and (not (M.wall? x y))
