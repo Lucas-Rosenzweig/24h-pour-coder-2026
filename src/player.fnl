@@ -8,8 +8,8 @@
 
 ;; -- Etat initial du joueur --
 (fn player.new []
-  {:x 120
-   :y 38
+  {:x 24
+   :y 64
    :size 8
    :speed 2
    :color 12
