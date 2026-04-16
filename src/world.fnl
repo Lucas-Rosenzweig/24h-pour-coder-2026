@@ -171,6 +171,18 @@
 (set M.current-map-kind :combat)
 (set M.rooms-since-shop 0)
 
+(fn M.load-boss-map []
+  (set M.current-map-id -2)
+  (set M.current-map-kind :boss)
+  (set M.door-open false)
+  (set map-v [])
+  (set matrice-active boss-map.c)
+  (each [_ ligne (ipairs boss-map.v)]
+    (let [new-ligne []]
+      (each [_ id (ipairs ligne)]
+        (table.insert new-ligne id))
+      (table.insert map-v new-ligne))))
+
 (fn M.load-map [map-id]
   (set M.current-map-id map-id)
   (set M.door-open false)
@@ -218,16 +230,24 @@
 	;; Avance la progression des salles :
 	;; - Toutes les 4 salles de combat terminÃ©es, prochaine salle = shop
 	;; - En sortant du shop, on repart sur une salle de combat et le compteur repart Ã  0
-	(fn M.load-next-room []
-	  (if (M.is-shop?)
-	      (do
-	        (set M.rooms-since-shop 0)
-	        (M.load-random-map))
-	      (do
-	        (set M.rooms-since-shop (+ M.rooms-since-shop 1))
-	        (if (>= M.rooms-since-shop 4)
-	            (M.load-shop-map)
-	            (M.load-random-map)))))
+(fn M.load-next-room []
+  (if (M.is-shop?)
+      (do
+        ;; après le shop -> boss
+        (M.load-boss-map))
+
+      (if (M.is-boss-room)
+          (do
+            ;; après le boss -> on repart sur un nouveau cycle
+            (set M.rooms-since-shop 0)
+            (M.load-random-map))
+
+          (do
+            ;; progression normale des salles de combat
+            (set M.rooms-since-shop (+ M.rooms-since-shop 1))
+            (if (>= M.rooms-since-shop 4)
+                (M.load-shop-map)
+                (M.load-random-map))))))
 
 (fn M.open-door []
   (set M.door-open true)
