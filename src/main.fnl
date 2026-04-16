@@ -19,13 +19,15 @@
 (local pickup-spawn-delay 300)
 (local max-pickups 3)
 (local reward-screen (item.new))
-(table.insert enemies (enemie.new 50 50))
-(table.insert enemies (enemie.new 180 100))
-(table.insert enemies (enemie.new 180 90))
-(table.insert enemies (enemie.new 180 120))
 
 ;; Initialisation du joueur
 (local joueur (player.new))
+
+(fn spawn-room-enemies [count]
+  (for [_ 1 count]
+    (table.insert enemies
+      (enemie.new (* (math.random 10 20) 8)
+                  (* (math.random 5 12) 8)))))
 
 (fn player-overlap-item? [p pickup]
   (and pickup.active
@@ -87,15 +89,15 @@
 
   ;; Portes / Transition de carte (uniquement si porte ouverte)
   (when (world.is-door? joueur.x joueur.y joueur.size)
-    (world.load-random-map)
+    (world.load-next-room)
     
     ;; Téléportation à gauche
     (set joueur.x 24)
     (set joueur.y 64)
 
-    ;; Génération de nouveaux ennemis pour la nouvelle salle
-    (for [i 1 4]
-      (table.insert enemies (enemie.new (* (math.random 10 20) 8) (* (math.random 5 12) 8))))
+    ;; Génération de nouveaux ennemis pour la nouvelle salle (pas de combat dans le shop)
+    (when (not (world.is-shop?))
+      (spawn-room-enemies 4))
 
     ;; Effacer les projectiles et éclairs
     (while (> (# projectiles) 0) (table.remove projectiles 1))
@@ -179,6 +181,9 @@
   ;; Initialisation unique
   (when (not initialized)
     (world.init-assets)
+    ;; Ennemis uniquement si salle de combat au départ
+    (when (not (world.is-shop?))
+      (spawn-room-enemies 4))
     (set initialized true))
 
   ;; Pause du jeu si l'ecran reward est ouvert
