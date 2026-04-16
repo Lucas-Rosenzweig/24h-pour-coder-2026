@@ -509,6 +509,8 @@
 (fn reset-game []
   ;; Réinitialisation complète du joueur et des listes
   (set joueur (player.new))
+  (set joueur.x 24)
+  (set joueur.y 64)
   (clear-list enemies)
   (clear-list projectiles)
   (clear-list lightning-flashes)
