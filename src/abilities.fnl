@@ -6,16 +6,16 @@
 ;; ============================================================
 
 (local SWORD-BASE
-  {:damage 3
+  {:damage 1
    :cooldown 18
-   :range 20
+   :range 15
    :arc 120 ;; Correspond a l'angle d'attaque en degres (0 = ligne droite), avec arc = 120, l'attaque couvre un cone de 120 degres devant le joueur
    :hits 1})
 
 ;; Types : :stat (stackable infini) | :behavior (rules specifiques)
 ;; stack? : true = proposable plusieurs fois, false = une seule fois
 (local sword-upgrades
-  {1 {:name "Degats+"       :type :stat     :stack? true  :effects {:damage 2}}
+  {1 {:name "Degats+"       :type :stat     :stack? true  :effects {:damage 1}}
    2 {:name "Vitesse+"      :type :stat     :stack? true  :effects {:cooldown -2}}
    3 {:name "Portee+"       :type :stat     :stack? true  :effects {:range 4}}
    4 {:name "Arc tranchant" :type :behavior :stack? true  :effects {:arc 60}}

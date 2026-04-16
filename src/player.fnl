@@ -506,40 +506,20 @@
         half-arc (* (/ (math.max stats.arc 15) 2) (/ math.pi 180))
         cx (+ p.x (/ p.size 2))
         cy (+ p.y (/ p.size 2))]
-    (fn point-in-sector? [px py]
-      (let [dx (- px cx)
-            dy (- py cy)
-            dist (math.sqrt (+ (* dx dx) (* dy dy)))]
-        (if (> dist stats.range)
-            false
-            (let [angle-to-point (math.atan2 dy dx)
-                  diff (math.abs (- angle-to-point facing))
-                  norm-diff (if (> diff math.pi) (- (* 2 math.pi) diff) diff)]
-              (<= norm-diff half-arc)))))
     (each [_ e (ipairs enemies)]
-      (let [x e.x
-            y e.y
-            s e.size
-            x2 (+ x s)
-            y2 (+ y s)
-            mid-x (+ x (/ s 2))
-            mid-y (+ y (/ s 2))
-            points [[mid-x mid-y]
-                    [x y] [x2 y] [x y2] [x2 y2]
-                    [mid-x y] [mid-x y2]
-                    [x mid-y] [x2 mid-y]]]
-        (var hit? false)
-        ;; Si le joueur est déjà dans la hitbox, on considère que le hit passe.
-        (when (and (>= cx x) (<= cx x2) (>= cy y) (<= cy y2))
-          (set hit? true))
-        (when (not hit?)
-          (each [_ pt (ipairs points)]
-            (when (and (not hit?) (point-in-sector? (. pt 1) (. pt 2)))
-              (set hit? true))))
-        (when hit?
-          (enemie.take-damage e stats.damage)
-          (when enemie.apply-knockback
-            (enemie.apply-knockback e cx cy 2.8)))))))
+      (let [dx (- (+ e.x (/ e.size 2)) cx)
+            dy (- (+ e.y (/ e.size 2)) cy)
+            dist (math.sqrt (+ (* dx dx) (* dy dy)))
+            ;; Compense la différence de gabarit: un boss 16x16 ne doit pas devenir intouchable au cac.
+            target-reach (+ stats.range (math.max 0 (/ (- e.size p.size) 2)))]
+        (when (<= dist target-reach)
+          (let [angle-to-enemy (math.atan2 dy dx)
+                diff (math.abs (- angle-to-enemy facing))
+                norm-diff (if (> diff math.pi) (- (* 2 math.pi) diff) diff)]
+            (when (<= norm-diff half-arc)
+              (enemie.take-damage e stats.damage)
+              (when enemie.apply-knockback
+                (enemie.apply-knockback e cx cy 2.8)))))))))
 
 ;; Lance l'animation — les dégâts sont appliqués à la fin de chaque sweep
 (fn player.attack [p enemies enemie]
