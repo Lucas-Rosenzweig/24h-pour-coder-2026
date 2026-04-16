@@ -22,8 +22,8 @@
    :size 8
    :speed 2
    :color 12
-   :hp 10
-   :max-hp 10
+   :hp 20
+   :max-hp 20
    ;; Si id = -1 vide
    :id-sword-upgrades [0]
    :id-spell-upgrades {:id nil :applied-upgrades []}
