@@ -19,6 +19,14 @@
 (local pickup-spawn-delay 300)
 (local max-pickups 3)
 (local reward-screen (item.new))
+(local reward-pickup-size 8)
+(var room-reward-spawned false)
+(var room-reward-required false)
+
+(table.insert enemies (enemie.new 50 50))
+(table.insert enemies (enemie.new 180 100))
+(table.insert enemies (enemie.new 180 90))
+(table.insert enemies (enemie.new 180 120))
 
 ;; Initialisation du joueur
 (local joueur (player.new))
@@ -52,19 +60,6 @@
   ;; Mise a jour (inputs + collisions gerees par world)
   (player.update joueur world enemies)
 
-  ;; Spawn aleatoire de pickups avec limite a l'ecran
-  (set pickup-spawn-timer (- pickup-spawn-timer 1))
-  (when (<= pickup-spawn-timer 0)
-    (spawn-pickup)
-    (set pickup-spawn-timer pickup-spawn-delay))
-
-  ;; Ramassage des pickups
-  (for [i (# pickups) 1 -1]
-    (let [pickup (. pickups i)]
-      (when (player-overlap-item? joueur pickup)
-        (table.remove pickups i)
-        (item.open reward-screen joueur))))
-
   ;; Attaque si touche E appuyee
   (when (keyp 5)
     (player.attack joueur enemies enemie))
@@ -83,11 +78,31 @@
   (when (keyp 26)
     (player.use-utility joueur world))
 
-  ;; Gestion d'ouverture de la porte
-  (when (and (= (# enemies) 0) (not world.door-open))
-    (world.open-door))
+  (each [i e (ipairs enemies)]
+    (enemie.update e joueur world enemies)
+    (enemie.attack e joueur player.take-damage world)
+    ;; suppression si mort
+    (when (enemie.is-dead? e)
+      (player.add-gold joueur (math.random 5 20))
+      (table.remove enemies i)))
 
-  ;; Portes / Transition de carte (uniquement si porte ouverte)
+  ;; Fin de salle: ouverture de porte + spawn de la recompense devant la sortie.
+  (when (and (= (# enemies) 0) (not room-reward-spawned))
+    (world.open-door)
+    (let [spawn (world.get-door-reward-spawn reward-pickup-size)]
+      (table.insert pickups {:x spawn.x :y spawn.y :size reward-pickup-size :active true}))
+    (set room-reward-spawned true)
+    (set room-reward-required true))
+
+  ;; Ramassage de la recompense de salle (obligatoire avant transition)
+  (for [i (# pickups) 1 -1]
+    (let [pickup (. pickups i)]
+      (when (player-overlap-item? joueur pickup)
+        (table.remove pickups i)
+        (item.open reward-screen joueur)
+        (set room-reward-required false))))
+
+  ;; Portes / Transition de carte (bloquee tant que la recompense n'est pas prise)
   (when (world.is-door? joueur.x joueur.y joueur.size)
     (world.load-next-room)
     
@@ -99,17 +114,14 @@
     (when (not (world.is-shop?))
       (spawn-room-enemies 4))
 
-    ;; Effacer les projectiles et éclairs
+    ;; Effacer les projectiles, éclairs et pickups residuels
     (while (> (# projectiles) 0) (table.remove projectiles 1))
-    (while (> (# lightning-flashes) 0) (table.remove lightning-flashes 1)))
+    (while (> (# lightning-flashes) 0) (table.remove lightning-flashes 1))
+    (while (> (# pickups) 0) (table.remove pickups 1))
 
-  (each [i e (ipairs enemies)]
-    (enemie.update e joueur world enemies)
-    (enemie.attack e joueur player.take-damage world)
-    ;; suppression si mort
-    (when (enemie.is-dead? e)
-      (player.add-gold joueur (math.random 5 20))
-      (table.remove enemies i)))
+    ;; Reset etat de salle pour la prochaine room
+    (set room-reward-spawned false)
+    (set room-reward-required false))
 
   ;; Mise a jour des projectiles
   (for [i (# projectiles) 1 -1]
