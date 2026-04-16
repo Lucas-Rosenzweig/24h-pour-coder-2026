@@ -619,6 +619,8 @@
     (print "Appuyez sur Z pour recommencer" 45 90 15)))
 
 ;; Boucle principale
+(music 0)
+
 (fn _G.TIC []
   ;; Initialisation unique
   (when (not initialized)
