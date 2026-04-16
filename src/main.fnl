@@ -80,6 +80,21 @@
   (when (keyp 26)
     (player.use-utility joueur world))
 
+  ;; Portes / Transition de carte
+  (when (world.is-door? joueur.x joueur.y joueur.size)
+    (if (= world.current-map-id 1)
+        (do
+          (world.load-map 2)
+          (set joueur.x 100)
+          (set joueur.y 50))
+        (do
+          (world.load-map 1)
+          (set joueur.x 100)
+          (set joueur.y 50)))
+    ;; Effacer les projectiles et éclairs
+    (while (> (# projectiles) 0) (table.remove projectiles 1))
+    (while (> (# lightning-flashes) 0) (table.remove lightning-flashes 1)))
+
   (each [i e (ipairs enemies)]
     (enemie.update e joueur world enemies)
     (enemie.attack e joueur player.take-damage world)
