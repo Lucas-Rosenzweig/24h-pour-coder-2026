@@ -80,6 +80,28 @@
   (when (keyp 26)
     (player.use-utility joueur world))
 
+  ;; Gestion d'ouverture de la porte
+  (when (and (= (# enemies) 0) (not world.door-open))
+    (world.open-door))
+
+  ;; Portes / Transition de carte (uniquement si porte ouverte)
+  (when (world.is-door? joueur.x joueur.y joueur.size)
+    (if (= world.current-map-id 1)
+        (world.load-map 2)
+        (world.load-map 1))
+    
+    ;; Téléportation à gauche
+    (set joueur.x 24)
+    (set joueur.y 64)
+
+    ;; Génération de nouveaux ennemis pour la nouvelle salle
+    (for [i 1 4]
+      (table.insert enemies (enemie.new (* (math.random 10 20) 8) (* (math.random 5 12) 8))))
+
+    ;; Effacer les projectiles et éclairs
+    (while (> (# projectiles) 0) (table.remove projectiles 1))
+    (while (> (# lightning-flashes) 0) (table.remove lightning-flashes 1)))
+
   (each [i e (ipairs enemies)]
     (enemie.update e joueur world enemies)
     (enemie.attack e joueur player.take-damage world)
