@@ -7,7 +7,7 @@
 
 (local SWORD-BASE
   {:damage 1
-   :cooldown 2
+   :cooldown 18
    :range 12
    :arc 120 ;; Correspond a l'angle d'attaque en degres (0 = ligne droite), avec arc = 120, l'attaque couvre un cone de 120 degres devant le joueur
    :hits 1})

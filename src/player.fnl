@@ -22,6 +22,7 @@
    :utility-cooldown 0
    :i-frames 0
    :spell-cooldown 0
+   :sword-cooldown 0
    :sword-flash 0
    :gold 0
    :sword-hits-left 0
@@ -84,6 +85,10 @@
   ;; Cooldown sort
   (when (> p.spell-cooldown 0)
     (set p.spell-cooldown (- p.spell-cooldown 1)))
+
+  ;; Cooldown épée
+  (when (> p.sword-cooldown 0)
+    (set p.sword-cooldown (- p.sword-cooldown 1)))
 
   ;; Cooldown utilitaire
   (when (> p.utility-cooldown 0)
@@ -301,8 +306,10 @@
     (each [_ e (ipairs enemies)]
       (let [dx (- (+ e.x (/ e.size 2)) cx)
             dy (- (+ e.y (/ e.size 2)) cy)
-            dist (math.sqrt (+ (* dx dx) (* dy dy)))]
-        (when (< dist stats.range)
+            dist (math.sqrt (+ (* dx dx) (* dy dy)))
+            ;; Compense la différence de gabarit: un boss 16x16 ne doit pas devenir intouchable au cac.
+            target-reach (+ stats.range (math.max 0 (/ (- e.size p.size) 2)))]
+        (when (<= dist target-reach)
           (let [angle-to-enemy (math.atan2 dy dx)
                 diff (math.abs (- angle-to-enemy facing))
                 norm-diff (if (> diff math.pi) (- (* 2 math.pi) diff) diff)]
@@ -312,8 +319,10 @@
 ;; Lance l'animation — les dégâts sont appliqués à la fin de chaque sweep
 (fn player.attack [p enemies enemie]
   (let [stats (abilities.compute-sword-stats p.id-sword-upgrades)]
-    (set p.sword-flash 8)
-    (set p.sword-hits-left stats.hits)))
+    (when (<= p.sword-cooldown 0)
+      (set p.sword-flash 8)
+      (set p.sword-hits-left stats.hits)
+      (set p.sword-cooldown stats.cooldown))))
 
 ;; Attaque de sort (ex: boule de feu, foudre)
 (fn player.spell-attack [p enemies enemie projectiles lightning-flashes]
@@ -410,4 +419,3 @@
                   (set chains-left 0))))))))))
 
 player
-
