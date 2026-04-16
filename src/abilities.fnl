@@ -47,7 +47,7 @@
 (local spells
   {1 {:name "Boule de feu"
       :desc "Projectile droit, degats de zone"
-      :base {:damage 2 :cooldown 40 :speed 3 :radius 8
+      :base {:damage 3 :cooldown 40 :speed 3 :radius 8
              :aoe 0 :dot 0 :dot-dur 0 :projectiles 1 :spread 0}
       :upgrades
         {1 {:name "Explosion"
@@ -55,21 +55,21 @@
             :effects {:aoe 16}}
          2 {:name "Brulure"
             :desc ""
-            :effects {:dot 2 :dot-dur 120}}
+            :effects {:dot 1 :dot-dur 120}}
          3 {:name "Triple boule"
             :desc ""
-            :effects {:projectiles 2 :spread 15}}}}
+            :effects {:projectiles 2 :spread 30}}}}
 
    2 {:name "Foudre"
       :desc ""
-      :base {:damage 2 :cooldown 50 :chain 0 :stun 0}
+      :base {:damage 2 :cooldown 70 :chain 0 :stun 0}
       :upgrades
         {1 {:name "Chaine"
             :desc ""
             :effects {:chain 2}}
          2 {:name "Paralysie"
             :desc ""
-            :effects {:stun 60}}}}})
+            :effects {:stun 30}}}}})
 
 ;; Calcule les stats effectives du sort equipe
 ;; spell-state : {:id N :applied-upgrades [...]} ou {:id nil :applied-upgrades []}

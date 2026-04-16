@@ -5,6 +5,7 @@
 (local CONTACT-COOLDOWN 26)
 (local CHARGE-SPEED 2.5)
 (local DODGE-SPEED 2.0)
+(local HURT-FLASH-DURATION 8)
 
 (fn clamp [v lo hi]
   (math.max lo (math.min hi v)))
@@ -109,7 +110,8 @@
     (set e.dot-tick (+ e.dot-tick 1))
     (when (>= e.dot-tick 60)
       (set e.dot-tick 0)
-      (set e.hp (- e.hp e.dot-dmg)))
+      (set e.hp (- e.hp e.dot-dmg))
+      (set e.hurt-timer HURT-FLASH-DURATION))
     (when (<= e.dot-timer 0)
       (set e.dot-dmg 0)
       (set e.dot-tick 0))))
@@ -133,7 +135,7 @@
         (set proj.dead true))
       (when (and (not proj.dead)
                  (projectile-hit-player? proj joueur world))
-        (take-damage joueur proj.damage)
+        (take-damage joueur proj.damage proj.x proj.y)
         (set proj.dead true))
       (when proj.dead
         (table.remove e.projectiles i)))))
@@ -150,6 +152,7 @@
            :dot-timer 0
            :dot-dmg 0
            :dot-tick 0
+           :hurt-timer 0
            :invuln-timer 0
            :phase :windup
            :phase-timer 0
@@ -193,6 +196,8 @@
     (set e.invuln-timer (- e.invuln-timer 1)))
   (when (> e.impact-flash 0)
     (set e.impact-flash (- e.impact-flash 1)))
+  (when (> e.hurt-timer 0)
+    (set e.hurt-timer (- e.hurt-timer 1)))
 
   (when (> e.stun-timer 0)
     (set e.stun-timer (- e.stun-timer 1)))
@@ -217,7 +222,7 @@
                       dy (- (+ joueur.y (/ joueur.size 2)) e.pattern-data.target-y)
                       dist (math.sqrt (+ (* dx dx) (* dy dy)))]
                   (when (<= dist e.pattern-data.radius)
-                    (take-damage joueur 1)))))
+                    (take-damage joueur 1 e.pattern-data.target-x e.pattern-data.target-y)))))
           (set e.phase-timer (- e.phase-timer 1))
           (when (<= e.phase-timer 0)
             (begin-recover e)))
@@ -241,12 +246,13 @@
 (fn boss.attack [e joueur take-damage world]
   (when (and (world.collide? e.x e.y e.size joueur.x joueur.y joueur.size)
              (= e.attack-timer 0))
-    (take-damage joueur CONTACT-DAMAGE)
+    (take-damage joueur CONTACT-DAMAGE (center-x e) (center-y e))
     (set e.attack-timer CONTACT-COOLDOWN)))
 
 (fn boss.take-damage [e dmg]
   (when (and (> dmg 0) (<= e.invuln-timer 0))
-    (set e.hp (- e.hp dmg))))
+    (set e.hp (- e.hp dmg))
+    (set e.hurt-timer HURT-FLASH-DURATION)))
 
 (fn boss.apply-dot [e dmg dur]
   (set e.dot-dmg dmg)
@@ -256,6 +262,10 @@
 (fn boss.apply-stun [e frames]
   (when (> frames e.stun-timer)
     (set e.stun-timer frames)))
+
+;; Le boss ne subit pas de knockback de l'épée pour garder ses patterns lisibles.
+(fn boss.apply-knockback [_ _ _ _]
+  nil)
 
 (fn boss.is-dead? [e]
   (<= e.hp 0))
@@ -302,7 +312,6 @@
       (spr (+ base 1) (+ e.x 8) e.y 15)
       (spr (+ base 2) e.x (+ e.y 8) 15)
       (spr (+ base 3) (+ e.x 8) (+ e.y 8) 15)))
-
   ;; barre de vie boss
   (let [bar-w 28
         x (- e.x 6)

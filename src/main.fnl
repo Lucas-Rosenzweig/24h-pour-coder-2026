@@ -32,21 +32,51 @@
 (var shop-msg "")
 (var shop-msg-timer 0)
 
+(local DOOR-PULSE-DURATION 24)
+(local PLAYER-HIT-OVERLAY-DURATION 8)
+(local PICKUP-BOB-AMPLITUDE 2)
+(local PICKUP-BOB-SPEED 8)
+
+(local fx
+  {:frame 0
+   :door-pulse 0
+   :door-pulse-x 120
+   :door-pulse-y 72
+   :player-hit-overlay 0})
+
 ;; Initialisation du joueur
 (var joueur (player.new))
+
+(fn tick-fx []
+  (set fx.frame (+ fx.frame 1))
+  (when (> fx.door-pulse 0)
+    (set fx.door-pulse (- fx.door-pulse 1)))
+  (when (> fx.player-hit-overlay 0)
+    (set fx.player-hit-overlay (- fx.player-hit-overlay 1))))
+
+(fn trigger-door-pulse []
+  (let [spawn (world.get-door-reward-spawn reward-pickup-size)]
+    (set fx.door-pulse DOOR-PULSE-DURATION)
+    (set fx.door-pulse-x (+ spawn.x 4))
+    (set fx.door-pulse-y (+ spawn.y 4))))
+
+(fn player-take-damage-with-fx [p dmg hit-x hit-y]
+  (when (player.take-damage p dmg hit-x hit-y world)
+    (set fx.player-hit-overlay PLAYER-HIT-OVERLAY-DURATION)
+    true))
 
 (fn is-boss? [e]
   (= e.type :boss))
 
 (fn entity-update [e]
   (if (is-boss? e)
-      (boss.update e joueur world enemies player.take-damage)
-      (enemie.update e joueur world enemies player.take-damage)))
+      (boss.update e joueur world enemies player-take-damage-with-fx)
+      (enemie.update e joueur world enemies player-take-damage-with-fx)))
 
 (fn entity-attack [e]
   (if (is-boss? e)
-      (boss.attack e joueur player.take-damage world)
-      (enemie.attack e joueur player.take-damage world)))
+      (boss.attack e joueur player-take-damage-with-fx world)
+      (enemie.attack e joueur player-take-damage-with-fx world)))
 
 (fn entity-draw [e]
   (if (is-boss? e)
@@ -73,10 +103,16 @@
       (boss.apply-stun e frames)
       (enemie.apply-stun e frames)))
 
+(fn entity-apply-knockback [e from-x from-y strength]
+  (if (is-boss? e)
+      (boss.apply-knockback e from-x from-y strength)
+      (enemie.apply-knockback e from-x from-y strength)))
+
 (local combat-api
   {:take-damage entity-take-damage
    :apply-dot entity-apply-dot
    :apply-stun entity-apply-stun
+   :apply-knockback entity-apply-knockback
    :is-dead? entity-is-dead?})
 
 (fn random-enemy-type []
@@ -108,6 +144,11 @@
        (< (math.abs (- p.x pickup.x)) pickup.size)
        (< (math.abs (- p.y pickup.y)) pickup.size)))
 
+(fn player-near-item? [p pickup]
+  (let [dx (- (+ p.x (/ p.size 2)) (+ pickup.x (/ pickup.size 2)))
+        dy (- (+ p.y (/ p.size 2)) (+ pickup.y (/ pickup.size 2)))]
+    (< (+ (* dx dx) (* dy dy)) 450)))
+
 (fn shop-set-msg [txt]
   (set shop-msg txt)
   (set shop-msg-timer 60))
@@ -122,7 +163,7 @@
   (if (< joueur.gold it.cost)
       (shop-set-msg (.. it.cost "g requis"))
       (do
-        (set joueur.gold (- joueur.gold it.cost))
+        (player.spend-gold joueur it.cost)
         (if (= it.kind :heal)
             (do
               (player.heal joueur it.amount)
@@ -149,15 +190,26 @@
   (each [_ it (ipairs shop-items)]
     (when it.active
       (let [label (.. it.cost "g")
-            sid (if (= it.kind :heal) spr-potion spr-item-upgrade)]
+            sid (if (= it.kind :heal) spr-potion spr-item-upgrade)
+            bob (math.floor (* (math.sin (/ (+ fx.frame (* it.x 0.5)) PICKUP-BOB-SPEED)) PICKUP-BOB-AMPLITUDE))
+            draw-y (+ it.y bob)
+            near? (player-near-item? joueur it)
+            pulse-r (+ 7 (math.floor (* (math.sin (/ (+ fx.frame (* it.y 0.4)) 5)) 1.5)))]
+        (when near?
+          (circb (+ it.x 4) (+ draw-y 4) pulse-r (if (= (% (// fx.frame 4) 2) 0) 9 10)))
         ;; "item par terre" (sprite)
-        (spr sid it.x it.y 15)
+        (spr sid it.x draw-y 15)
         ;; indication au dessus
-        (print "W acheter" (- it.x 6) (- it.y 10) 13 false 1 true)
+        (print "W acheter" (- it.x 6) (- draw-y 10) (if near? 12 13) false 1 true)
         ;; prix juste en dessous
-        (print label (- it.x 2) (+ it.y 10) 12 false 1 true)))))
+        (print label (- it.x 2) (+ draw-y 10) 12 false 1 true)))))
   (when (not= shop-msg "")
-    (print shop-msg 10 124 12 false 1 true))
+    (let [t shop-msg-timer
+          y (- 124 (math.floor (/ (- 60 t) 10)))
+          color (if (< t 15)
+                    (if (= (% (// t 2) 2) 0) 12 6)
+                    12)]
+      (print shop-msg 10 y color false 1 true)))
 
 (fn spawn-pickup []
   (when (< (# pickups) max-pickups)
@@ -169,7 +221,7 @@
         (set attempts (+ attempts 1))
         (when (and (not (world.wall? x y))
                    (not (world.wall? (+ x 7) (+ y 7))))
-          (table.insert pickups {:x x :y y :size 8 :active true})
+          (table.insert pickups {:x x :y y :size 8 :active true :phase (math.random 0 60)})
           (set spawned true))))))
 
 
@@ -180,14 +232,16 @@
   ;; Shop : pas de combat, juste l'UI + porte ouverte
   (when (world.is-shop?)
     (when (not world.door-open)
-      (world.open-door))
+      (world.open-door)
+      (trigger-door-pulse))
     (when (= (# shop-items) 0)
       (init-shop-items))
     (update-shop-items))
 
   ;; Attaque si touche E appuyee
   (when (and (not (world.is-shop?)) (keyp 5))
-    (player.attack joueur enemies combat-api))
+    (let [status (player.attack joueur enemies combat-api)]
+      (player.feedback-action-status joueur :attack status)))
 
   ;; Hit épée déclenché à la fin de chaque sweep
   (when joueur.sword-hit-due
@@ -196,11 +250,13 @@
 
   ;; Sort si touche A appuyée (keyp 1)
   (when (and (not (world.is-shop?)) (keyp 1))
-    (player.spell-attack joueur enemies combat-api projectiles lightning-flashes))
+    (let [status (player.spell-attack joueur enemies combat-api projectiles lightning-flashes)]
+      (player.feedback-action-status joueur :spell status)))
 
   ;; Utilitaire actif si touche Z appuyée (keyp 26)
   (when (and (not (world.is-shop?)) (keyp 26))
-    (player.use-utility joueur world))
+    (let [status (player.use-utility joueur world)]
+      (player.feedback-action-status joueur :utility status)))
 
   ;; Mise a jour IA et suppression des morts (pas pendant le shop)
   (when (not (world.is-shop?))
@@ -217,8 +273,10 @@
              (= (# enemies) 0)
              (not room-reward-spawned))
     (world.open-door)
+    (trigger-door-pulse)
     (let [spawn (world.get-door-reward-spawn reward-pickup-size)]
-      (table.insert pickups {:x spawn.x :y spawn.y :size reward-pickup-size :active true}))
+      (table.insert pickups
+        {:x spawn.x :y spawn.y :size reward-pickup-size :active true :phase (math.random 0 60)}))
     (set room-reward-spawned true)
     (set room-reward-required true))
 
@@ -302,6 +360,11 @@
 (fn draw-game []
   (cls 0)
   (world.draw)
+  (when (> fx.door-pulse 0)
+    (let [progress (- DOOR-PULSE-DURATION fx.door-pulse)
+          radius (+ 8 (math.floor (* progress 1.2)))
+          col (if (= (% (// fx.door-pulse 2) 2) 0) 9 12)]
+      (circb fx.door-pulse-x fx.door-pulse-y radius col)))
   (each [_ e (ipairs enemies)]
     (entity-draw e))
   (each [_ proj (ipairs projectiles)]
@@ -310,8 +373,13 @@
           angle (math.atan2 proj.vy proj.vx)
           rot (% (+ (math.floor (+ 0.5 (/ (* angle 2) math.pi))) 4) 4)]
       (spr (+ 200 frame) (- (math.floor proj.x) 4) (- (math.floor proj.y) 4) 15 1 0 rot)))
-  (each [_ pickup (ipairs pickups)]
-    (spr spr-item-upgrade pickup.x pickup.y 15))
+  (each [i pickup (ipairs pickups)]
+    (let [phase (+ fx.frame (or pickup.phase (* i 9)))
+          bob (math.floor (* (math.sin (/ phase PICKUP-BOB-SPEED)) PICKUP-BOB-AMPLITUDE))
+          draw-y (+ pickup.y bob)
+          pulse-r (+ 6 (math.floor (* (math.sin (/ phase 6)) 1.5)))]
+      (spr spr-item-upgrade pickup.x draw-y 15)
+      (circb (+ pickup.x 4) (+ draw-y 4) pulse-r (if (= (% (// phase 4) 2) 0) 9 12))))
   ;; Cône d'attaque épée
   (when (> joueur.sword-flash 0)
     (player.draw-attack-cone joueur))
@@ -322,6 +390,12 @@
           my (+ (/ (+ f.y1 f.y2) 2) f.jy)]
       (line f.x1 f.y1 mx my 9)
       (line mx my f.x2 f.y2 9)))
+  (when (> fx.player-hit-overlay 0)
+    (let [col (if (= (% (// fx.player-hit-overlay 2) 2) 0) 6 12)]
+      (rect 0 16 240 2 col)
+      (rect 0 134 240 2 col)
+      (rect 0 16 2 120 col)
+      (rect 238 16 2 120 col)))
   (when (world.is-shop?)
     (draw-shop-items))
   (player.draw-ui joueur)
@@ -464,6 +538,8 @@
   (set shop-items [])
   (set shop-msg "")
   (set shop-msg-timer 0)
+  (set fx.door-pulse 0)
+  (set fx.player-hit-overlay 0)
   
   ;; Relance la partie directement
   (set game-state :game))
@@ -487,6 +563,7 @@
     (world.init-assets)
     (setup-room-encounter)
     (set initialized true))
+  (tick-fx)
 
   (if (= game-state :intro)
       (do
