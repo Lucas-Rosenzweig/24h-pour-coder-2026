@@ -153,7 +153,7 @@
 (fn player.take-damage [p dmg]
   (when (<= p.i-frames 0)
     (set p.hp (- p.hp dmg))
-    (set p.i-frames 30)
+    (set p.i-frames 40)
     (when (< p.hp 0)
       (set p.hp 0))))
 

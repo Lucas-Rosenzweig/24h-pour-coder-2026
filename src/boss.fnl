@@ -143,8 +143,8 @@
            :x x
            :y y
            :size BOSS-SIZE
-           :hp 55
-           :max-hp 55
+           :hp 40
+           :max-hp 40
            :attack-timer 0
            :stun-timer 0
            :dot-timer 0
@@ -217,7 +217,7 @@
                       dy (- (+ joueur.y (/ joueur.size 2)) e.pattern-data.target-y)
                       dist (math.sqrt (+ (* dx dx) (* dy dy)))]
                   (when (<= dist e.pattern-data.radius)
-                    (take-damage joueur 2)))))
+                    (take-damage joueur 1)))))
           (set e.phase-timer (- e.phase-timer 1))
           (when (<= e.phase-timer 0)
             (begin-recover e)))

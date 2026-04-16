@@ -15,11 +15,11 @@
 ;; Types : :stat (stackable infini) | :behavior (rules specifiques)
 ;; stack? : true = proposable plusieurs fois, false = une seule fois
 (local sword-upgrades
-  {1 {:name "Degats+"       :type :stat     :stack? true  :effects {:damage 3}}
-   2 {:name "Vitesse+"      :type :stat     :stack? true  :effects {:cooldown -3}}
+  {1 {:name "Degats+"       :type :stat     :stack? true  :effects {:damage 1}}
+   2 {:name "Vitesse+"      :type :stat     :stack? true  :effects {:cooldown -2}}
    3 {:name "Portee+"       :type :stat     :stack? true  :effects {:range 4}}
    4 {:name "Arc tranchant" :type :behavior :stack? true  :effects {:arc 60}}
-   5 {:name "Double frappe" :type :behavior :stack? true  :effects {:hits 1}}})
+   5 {:name "Double frappe" :type :behavior :stack? false :effects {:hits 1}}})
 
 ;; Calcule les stats effectives de l'epee a partir de la liste d'upgrade IDs
 (fn abilities.compute-sword-stats [upgrade-ids]
@@ -54,8 +54,8 @@
             :desc "Zone de degats a l'impact (+16px)"
             :effects {:aoe 16}}
          2 {:name "Brulure"
-            :desc "3 degats/sec pendant 3 sec"
-            :effects {:dot 3 :dot-dur 180}}
+            :desc "2 degats/sec pendant 2 sec"
+            :effects {:dot 2 :dot-dur 120}}
          3 {:name "Triple boule"
             :desc "3 boules en eventail (15 deg)"
             :effects {:projectiles 2 :spread 15}}}}
@@ -97,8 +97,8 @@
 
    2 {:name "Bouclier d'epines"
       :type :passive
-      :desc "Renvoie 5 degats aux ennemis quand ils frappent le joueur"
-      :stats {:reflect-damage 5}}})
+      :desc "Renvoie 2 degats aux ennemis quand ils frappent le joueur"
+      :stats {:reflect-damage 2}}})
 
 ;; ============================================================
 ;; ACCESSEURS PUBLICS
