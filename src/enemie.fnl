@@ -8,10 +8,10 @@
 (local LASER-WINDUP 48)
 (local LASER-COOLDOWN 70)
 (local LASER-DAMAGE 1)
-(local KAMIKAZE-TRIGGER-DIST 24)
-(local KAMIKAZE-ARMING-TIME 45)
-(local KAMIKAZE-EXPLOSION-RADIUS 18)
-(local KAMIKAZE-EXPLOSION-DAMAGE 1)
+(local KAMIKAZE-TRIGGER-DIST 15)
+(local KAMIKAZE-ARMING-TIME 34)
+(local KAMIKAZE-EXPLOSION-RADIUS 40)
+(local KAMIKAZE-EXPLOSION-DAMAGE 4)
 (local KAMIKAZE-EXPLOSION-FLASH 8)
 (local HURT-FLASH-DURATION 8)
 (local SWORD-KNOCKBACK-DURATION 7)
@@ -283,7 +283,8 @@
             prev-y e.y]
         (move-with-path e joueur world enemies)
         (track-movement e prev-x prev-y)
-        (when (<= (enemie.distance e joueur) KAMIKAZE-TRIGGER-DIST)
+        ;; Déclenchement aligné sur le vrai rayon d'explosion pour éviter les amorçages "hors zone".
+        (when (in-kamikaze-radius? e joueur)
           (set e.kami-state :arming)
           (set e.kami-arming-timer KAMIKAZE-ARMING-TIME)
           (set e.path [])))
@@ -315,8 +316,8 @@
            :size 8
            :speed 0.5
            :color 8
-           :hp 3
-           :max-hp 3
+           :hp 10
+           :max-hp 10
            :type kind
            :sprite-id nil
            :attack-timer 0
@@ -351,20 +352,20 @@
     (if (= kind :laser)
         (do
           (set e.speed 0.45)
-          (set e.hp 3)
-          (set e.max-hp 3)
+          (set e.hp 4)
+          (set e.max-hp 4)
           (set e.sprite-id LASER-SPRITE-ID))
         (= kind :kamikaze)
         (do
-          (set e.speed 0.7)
-          (set e.hp 2)
-          (set e.max-hp 2)
+          (set e.speed 0.9)
+          (set e.hp 24)
+          (set e.max-hp 24)
           (set e.sprite-id KAMIKAZE-SPRITE-ID))
         ;; grunt
         (do
           (set e.speed 0.5)
-          (set e.hp 3)
-          (set e.max-hp 3)
+          (set e.hp 5)
+          (set e.max-hp 5)
           (set e.sprite-id nil)))
     e))
 
