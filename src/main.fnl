@@ -33,7 +33,7 @@
 (var shop-msg-timer 0)
 
 ;; Initialisation du joueur
-(local joueur (player.new))
+(var joueur (player.new))
 
 (fn is-boss? [e]
   (= e.type :boss))
@@ -444,6 +444,41 @@
   (when (< (% menu-blink 60) 30)
     (print "Appuyez sur Z pour jouer" 52 100 15))) ;; Blanc (15)
 
+;; --- GAME OVER ---
+(fn reset-game []
+  ;; Réinitialisation complète du joueur et des listes
+  (set joueur (player.new))
+  (clear-list enemies)
+  (clear-list projectiles)
+  (clear-list lightning-flashes)
+  (clear-list pickups)
+  
+  ;; Reset de l'état du monde
+  (world.construire-map)
+  (setup-room-encounter)
+  
+  ;; Reset des drapeaux de salle
+  (set room-reward-spawned false)
+  (set room-reward-required false)
+  (set shop-items [])
+  (set shop-msg "")
+  (set shop-msg-timer 0)
+  
+  ;; Relance la partie directement
+  (set game-state :game))
+
+(fn update-gameover []
+  ;; Appuyer sur Z (26) ou Btn A (4) pour relancer
+  (when (or (keyp 26) (btnp 4))
+    (reset-game)))
+
+(fn draw-gameover []
+  (cls 0)
+  (print "GAME OVER" 90 50 12 false 2)
+  (set menu-blink (+ menu-blink 1))
+  (when (< (% menu-blink 60) 30)
+    (print "Appuyez sur Z pour recommencer" 45 90 15)))
+
 ;; Boucle principale
 (fn _G.TIC []
   ;; Initialisation unique
@@ -469,7 +504,16 @@
             (item.update reward-screen joueur)
             (update-game))
 
+        ;; Détection de la mort
+        (when (<= joueur.hp 0)
+          (set game-state :gameover))
+
         ;; Rendu
         (draw-game)
         (when (item.is-open? reward-screen)
-          (item.draw reward-screen)))))
+          (item.draw reward-screen)))
+
+      (= game-state :gameover)
+      (do
+        (update-gameover)
+        (draw-gameover))))
