@@ -25,7 +25,7 @@
     (+ (* (- joueur.x e.x) (- joueur.x e.x))
        (* (- joueur.y e.y) (- joueur.y e.y)))))
 
-;; =========================
+;; =========================x
 ;; IA : Pathfinding A-Star "Pixe-Perfect"
 ;; =========================
 (fn enemie.update [e joueur world enemies]

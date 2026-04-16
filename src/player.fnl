@@ -99,14 +99,31 @@
       (set p.hp 0))))
 
 (fn player.draw-ui [p]
-  ;; fond
+  ;; === Barre HP ===
   (rect 5 5 50 6 1)
-  
-  ;; vie actuelle
   (rect 5 5 (* 50 (/ p.hp p.max-hp)) 6 11)
-  
-  ;; contour
-  (rectb 5 5 50 6 12))
+  (rectb 5 5 50 6 12)
+
+  ;; === Slot Attack (épée — toujours équipé) ===
+  (rect  60 2 12 12 0)
+  (rectb 60 2 12 12 12)
+  (spr 10 62 4 0)
+
+  ;; === Slot Spell ===
+  (let [has-spell (not= p.id-spell-upgrades.id nil)
+        spell-sprite (if (= p.id-spell-upgrades.id 1) 10 11)]
+    (rect  74 2 12 12 0)
+    (rectb 74 2 12 12 (if has-spell 12 13))
+    (when has-spell
+      (spr spell-sprite 76 4 0)))
+
+  ;; === Slot Utility ===
+  (let [has-util (not= p.id-utility -1)
+        util-sprite (if (= p.id-utility 1) 10 11)]
+    (rect  88 2 12 12 0)
+    (rectb 88 2 12 12 (if has-util 12 13))
+    (when has-util
+      (spr util-sprite 90 4 0))))
 
 (fn player.heal [p amount]
   (set p.hp (+ p.hp amount))
