@@ -86,9 +86,7 @@
 
   ;; Portes / Transition de carte (uniquement si porte ouverte)
   (when (world.is-door? joueur.x joueur.y joueur.size)
-    (if (= world.current-map-id 1)
-        (world.load-map 2)
-        (world.load-map 1))
+    (world.load-random-map)
     
     ;; Téléportation à gauche
     (set joueur.x 24)
