@@ -46,7 +46,7 @@
 
 (local spells
   {1 {:name "Boule de feu"
-      :desc "Projectile droit, degats de zone"
+      :desc ""
       :base {:damage 3 :cooldown 40 :speed 3 :radius 8
              :aoe 0 :dot 0 :dot-dur 0 :projectiles 1 :spread 0}
       :upgrades
