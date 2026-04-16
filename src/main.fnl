@@ -473,7 +473,7 @@
 
 (fn draw-gameover []
   (cls 0)
-  (print "GAME OVER" 90 50 12 false 2)
+  (print "GAME OVER" 70 50 12 false 2)
   (set menu-blink (+ menu-blink 1))
   (when (< (% menu-blink 60) 30)
     (print "Appuyez sur Z pour recommencer" 45 90 15)))
