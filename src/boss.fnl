@@ -159,11 +159,31 @@
            :dodge-vx 0
            :dodge-vy 0
            :did-impact false
-           :impact-flash 0}]
+           :impact-flash 0
+           :anim-timer 0
+           :anim-frame 1
+           :facing :down
+           :moving? false}]
     (begin-windup e {:x (+ x 1) :y (+ y 1) :size 1})
     e))
 
+(fn update-facing [e vx vy]
+  (if (> (+ (math.abs vx) (math.abs vy)) 0.01)
+      (do
+        (set e.moving? true)
+        (if (> (math.abs vx) (math.abs vy))
+            (if (> vx 0) (set e.facing :right) (set e.facing :left))
+            (set e.facing :down)))))
+
+(fn advance-anim [e]
+  (let [threshold (if (or e.moving? (= e.phase :action)) 28 56)]
+    (set e.anim-timer (+ e.anim-timer 1))
+    (when (>= e.anim-timer threshold)
+      (set e.anim-timer 0)
+      (set e.anim-frame (+ 1 (% e.anim-frame 3))))))
+
 (fn boss.update [e joueur world _ take-damage]
+  (set e.moving? false)
   (update-dot e)
   (update-projectiles e joueur world take-damage)
 
@@ -186,7 +206,9 @@
         (= e.phase :action)
         (do
           (if (= e.pattern-index 1)
-              (move-safe e world e.pattern-data.vx e.pattern-data.vy)
+              (do
+                (update-facing e e.pattern-data.vx e.pattern-data.vy)
+                (move-safe e world e.pattern-data.vx e.pattern-data.vy))
               (= e.pattern-index 3)
               (when (and (not e.did-impact) (<= e.phase-timer 4))
                 (set e.did-impact true)
@@ -206,13 +228,15 @@
             (begin-dodge e world)))
         (= e.phase :dodge)
         (do
+          (update-facing e e.dodge-vx e.dodge-vy)
           (move-safe e world e.dodge-vx e.dodge-vy)
           (set e.phase-timer (- e.phase-timer 1))
           (when (<= e.phase-timer 0)
             (set e.pattern-index (+ e.pattern-index 1))
             (when (> e.pattern-index 3)
               (set e.pattern-index 1))
-            (begin-windup e joueur))))))
+            (begin-windup e joueur)))))
+  (advance-anim e))
 
 (fn boss.attack [e joueur take-damage world]
   (when (and (world.collide? e.x e.y e.size joueur.x joueur.y joueur.size)
@@ -260,10 +284,24 @@
   (draw-telegraph e)
   (draw-projectiles e)
   (when (or (<= e.invuln-timer 0) (= (% e.invuln-timer 4) 0))
-    (spr 27 e.x e.y 0)
-    (spr 29 (+ e.x 8) e.y 0)
-    (spr 28 e.x (+ e.y 8) 0)
-    (spr 30 (+ e.x 8) (+ e.y 8) 0))
+    (let [f (or e.anim-frame 1)
+          idle-bases [121 125 129]
+          right-bases [133 137 141]
+          left-bases [145 149 153]
+          down-bases [157 161 165]
+          attack-bases [169 173 177]
+          base (if (and (= e.phase :action)
+                        (or (= e.pattern-index 2) (= e.pattern-index 3)))
+                   (. attack-bases f)
+                   e.moving?
+                   (if (= e.facing :right) (. right-bases f)
+                       (= e.facing :left) (. left-bases f)
+                       (. down-bases f))
+                   (. idle-bases f))]
+      (spr base e.x e.y 15)
+      (spr (+ base 1) (+ e.x 8) e.y 15)
+      (spr (+ base 2) e.x (+ e.y 8) 15)
+      (spr (+ base 3) (+ e.x 8) (+ e.y 8) 15)))
 
   ;; barre de vie boss
   (let [bar-w 28
