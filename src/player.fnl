@@ -134,9 +134,7 @@
   (set p.gold (+ p.gold amount)))
 
 (fn player.draw-gold-icon [x y]
-  (circ (+ x 4) (+ y 4) 3 10)
-  (circ (+ x 4) (+ y 4) 1 14)
-  (circ (+ x 4) (+ y 4) 1 15))
+  (spr 206 x y 15))
 
 (fn player.draw-gold-ui [p]
   (let [label (tostring p.gold)
@@ -162,7 +160,7 @@
   ;; === Slot Attack (épée — toujours équipé) ===
   (rect  60 2 12 12 0)
   (rectb 60 2 12 12 12)
-  (spr 10 62 4 0)
+  (spr 10 62 4 15)
 
   ;; === Slot Spell ===
   (let [has-spell (not= p.id-spell-upgrades.id nil)

@@ -24,6 +24,8 @@
 (var room-reward-required false)
 
 ;; --- Shop (objets au sol) ---
+(local spr-potion 207)
+(local spr-item-upgrade 203)
 (var shop-items [])
 (var shop-msg "")
 (var shop-msg-timer 0)
@@ -81,11 +83,10 @@
 (fn draw-shop-items []
   (each [_ it (ipairs shop-items)]
     (when it.active
-      (let [col (if (= it.kind :heal) 11 12)
-            label (.. it.cost "g")]
-        ;; "item par terre"
-        (rect it.x it.y it.size it.size col)
-        (rectb it.x it.y it.size it.size 0)
+      (let [label (.. it.cost "g")
+            sid (if (= it.kind :heal) spr-potion spr-item-upgrade)]
+        ;; "item par terre" (sprite)
+        (spr sid it.x it.y 15)
         ;; indication au dessus
         (print "W acheter" (- it.x 6) (- it.y 10) 13 false 1 true)
         ;; prix juste en dessous
@@ -240,8 +241,7 @@
           frame (% (// elapsed 6) 3)]
       (spr (+ 200 frame) (- (math.floor proj.x) 4) (- (math.floor proj.y) 4) 15)))
   (each [_ pickup (ipairs pickups)]
-    (circ (+ pickup.x 4) (+ pickup.y 4) 4 10)
-    (circ (+ pickup.x 4) (+ pickup.y 4) 2 12))
+    (spr spr-item-upgrade pickup.x pickup.y 15))
   ;; Dessin des flashs eclair
   ;; Cône d'attaque épée
   (when (> joueur.sword-flash 0)
