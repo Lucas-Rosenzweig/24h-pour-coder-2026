@@ -314,7 +314,8 @@
                 diff (math.abs (- angle-to-enemy facing))
                 norm-diff (if (> diff math.pi) (- (* 2 math.pi) diff) diff)]
             (when (<= norm-diff half-arc)
-              (enemie.take-damage e stats.damage))))))))
+              (enemie.take-damage e stats.damage
+                                  {:source :sword :from-x cx :from-y cy}))))))))
 
 ;; Lance l'animation — les dégâts sont appliqués à la fin de chaque sweep
 (fn player.attack [p enemies enemie]

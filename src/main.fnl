@@ -34,6 +34,8 @@
 
 ;; Initialisation du joueur
 (var joueur (player.new))
+(local SWORD-KNOCKBACK-PX 12)
+(local SWORD-KNOCKBACK-STEP 1.5)
 
 (fn is-boss? [e]
   (= e.type :boss))
@@ -58,10 +60,69 @@
       (boss.is-dead? e)
       (enemie.is-dead? e)))
 
-(fn entity-take-damage [e dmg]
+(fn entity-center-x [e]
+  (+ e.x (/ e.size 2)))
+
+(fn entity-center-y [e]
+  (+ e.y (/ e.size 2)))
+
+(fn can-occupy-entity? [e nx ny]
+  (and (world.can-move? nx ny e.size)
+       (not (world.collide? nx ny e.size joueur.x joueur.y joueur.size))
+       (do
+         (var blocked false)
+         (each [_ other (ipairs enemies)]
+           (when (and (not= other e)
+                      (not (entity-is-dead? other))
+                      (world.collide? nx ny e.size other.x other.y other.size))
+             (set blocked true)))
+         (not blocked))))
+
+(fn queue-sword-knockback [e from-x from-y dist]
+  (when (> dist 0)
+    (let [dx (- (entity-center-x e) from-x)
+          dy (- (entity-center-y e) from-y)
+          len (math.sqrt (+ (* dx dx) (* dy dy)))]
+      (if (> len 0.001)
+          (do
+            (set e.kb-dx (/ dx len))
+            (set e.kb-dy (/ dy len)))
+          (do
+            (set e.kb-dx 1)
+            (set e.kb-dy 0)))
+      (set e.kb-left dist))))
+
+(fn apply-entity-knockback [e]
+  (when (> (or e.kb-left 0) 0)
+    (let [step (math.min SWORD-KNOCKBACK-STEP e.kb-left)
+          vx (* (or e.kb-dx 0) step)
+          vy (* (or e.kb-dy 0) step)]
+      (var moved false)
+      (let [nx (+ e.x vx)]
+        (when (can-occupy-entity? e nx e.y)
+          (set e.x nx)
+          (set moved true)))
+      (let [ny (+ e.y vy)]
+        (when (can-occupy-entity? e e.x ny)
+          (set e.y ny)
+          (set moved true)))
+      (if moved
+          (set e.kb-left (- e.kb-left step))
+          (set e.kb-left 0))
+      (when (< e.kb-left 0.001)
+        (set e.kb-left 0)))))
+
+(fn entity-take-damage [e dmg hit-context]
+  (local hp-before e.hp)
   (if (is-boss? e)
       (boss.take-damage e dmg)
-      (enemie.take-damage e dmg)))
+      (enemie.take-damage e dmg))
+  (when (and hit-context
+             (= hit-context.source :sword)
+             (> dmg 0)
+             (< e.hp hp-before)
+             (not (entity-is-dead? e)))
+    (queue-sword-knockback e hit-context.from-x hit-context.from-y SWORD-KNOCKBACK-PX)))
 
 (fn entity-apply-dot [e dmg dur]
   (if (is-boss? e)
@@ -207,6 +268,7 @@
     (for [i (# enemies) 1 -1]
       (let [e (. enemies i)]
         (entity-update e)
+        (apply-entity-knockback e)
         (entity-attack e)
         (when (entity-is-dead? e)
           (player.add-gold joueur (if (is-boss? e) 80 (math.random 5 20)))
