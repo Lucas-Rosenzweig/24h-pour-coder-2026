@@ -13,6 +13,9 @@
 (local KAMIKAZE-EXPLOSION-RADIUS 18)
 (local KAMIKAZE-EXPLOSION-DAMAGE 1)
 (local KAMIKAZE-EXPLOSION-FLASH 8)
+(local HURT-FLASH-DURATION 8)
+(local SWORD-KNOCKBACK-DURATION 7)
+(local SWORD-KNOCKBACK-FRICTION 0.72)
 
 ;; =========================
 ;; Utilitaires internes
@@ -62,7 +65,8 @@
     (set e.dot-tick (+ e.dot-tick 1))
     (when (>= e.dot-tick 60)
       (set e.dot-tick 0)
-      (set e.hp (- e.hp e.dot-dmg)))
+      (set e.hp (- e.hp e.dot-dmg))
+      (set e.hurt-timer HURT-FLASH-DURATION))
     (when (<= e.dot-timer 0)
       (set e.dot-dmg 0)
       (set e.dot-tick 0))))
@@ -78,6 +82,20 @@
 (fn ensure-path-state [e]
   (when (not e.path) (set e.path []))
   (when (not e.path-timer) (set e.path-timer 0)))
+
+(fn apply-knockback-motion [e world enemies joueur]
+  (when (> e.knockback-timer 0)
+    (set e.knockback-timer (- e.knockback-timer 1))
+    (let [nx (+ e.x e.knockback-vx)
+          ny (+ e.y e.knockback-vy)]
+      (when (and (world.can-move? nx e.y e.size)
+                 (not (world.collide? nx e.y e.size joueur.x joueur.y joueur.size)))
+        (set e.x nx))
+      (when (and (world.can-move? e.x ny e.size)
+                 (not (world.collide? e.x ny e.size joueur.x joueur.y joueur.size)))
+        (set e.y ny)))
+    (set e.knockback-vx (* e.knockback-vx SWORD-KNOCKBACK-FRICTION))
+    (set e.knockback-vy (* e.knockback-vy SWORD-KNOCKBACK-FRICTION))))
 
 (fn move-with-path [e joueur world enemies]
   (ensure-path-state e)
@@ -206,7 +224,7 @@
     (set e.laser-end-y end-y)
     (set e.laser-flash 6)
     (when hit-player
-      (take-damage joueur LASER-DAMAGE))))
+      (take-damage joueur LASER-DAMAGE sx sy))))
 
 (fn track-movement [e prev-x prev-y]
   (let [dx (- e.x prev-x)
@@ -281,7 +299,7 @@
         (when (not e.kami-did-damage)
           (set e.kami-did-damage true)
           (when (in-kamikaze-radius? e joueur)
-            (take-damage joueur KAMIKAZE-EXPLOSION-DAMAGE)))
+            (take-damage joueur KAMIKAZE-EXPLOSION-DAMAGE (center-x e) (center-y e))))
         (set e.kami-explosion-timer (- e.kami-explosion-timer 1))
         (when (<= e.kami-explosion-timer 0)
           (set e.hp 0))))
@@ -306,6 +324,10 @@
            :dot-timer 0
            :dot-dmg 0
            :dot-tick 0
+           :hurt-timer 0
+           :knockback-vx 0
+           :knockback-vy 0
+           :knockback-timer 0
            :path []
            :path-timer 0
            ;; Animations (grunt)
@@ -362,17 +384,24 @@
   (process-dot e)
   (process-stun e)
   (tick-attack-cooldown e)
+  (when (> e.hurt-timer 0)
+    (set e.hurt-timer (- e.hurt-timer 1)))
 
   ;; Stun: reset animation
   (when (> e.stun-timer 0)
     (set e.moving? false))
 
-  (when (<= e.stun-timer 0)
-    (if (= e.type :laser)
-        (update-laser e joueur world enemies do-damage)
-        (= e.type :kamikaze)
-        (update-kamikaze e joueur world enemies do-damage)
-        (update-grunt e joueur world enemies do-damage))))
+  (if (> e.knockback-timer 0)
+      (do
+        (set e.moving? true)
+        (apply-knockback-motion e world enemies joueur)
+        (tick-anim-2 e))
+      (when (<= e.stun-timer 0)
+        (if (= e.type :laser)
+            (update-laser e joueur world enemies do-damage)
+            (= e.type :kamikaze)
+            (update-kamikaze e joueur world enemies do-damage)
+            (update-grunt e joueur world enemies do-damage)))))
 
 ;; =========================
 ;; Attaque (contact)
@@ -383,7 +412,7 @@
     ;; On "gonfle" la hitbox de 1 pixel de chaque côté pour détecter le contact
     (when (and (world.collide? (- e.x 1) (- e.y 1) (+ e.size 2) joueur.x joueur.y joueur.size)
                (= e.attack-timer 0))
-      (take-damage joueur 1)
+      (take-damage joueur 1 (center-x e) (center-y e))
       (set e.attack-timer 30) ;; cooldown (~0.5s)
       ;; Bouclier d'épines : renvoie des dégâts au moment de l'impact
       (when (= joueur.id-utility 2)
@@ -394,7 +423,9 @@
 ;; Dégâts reçus
 ;; =========================
 (fn enemie.take-damage [e dmg]
-  (set e.hp (- e.hp dmg)))
+  (when (> dmg 0)
+    (set e.hp (- e.hp dmg))
+    (set e.hurt-timer HURT-FLASH-DURATION)))
 
 (fn enemie.apply-dot [e dmg dur]
   (set e.dot-dmg dmg)
@@ -404,6 +435,20 @@
 (fn enemie.apply-stun [e frames]
   (when (> frames e.stun-timer)
     (set e.stun-timer frames)))
+
+(fn enemie.apply-knockback [e from-x from-y power]
+  (let [cx (center-x e)
+        cy (center-y e)
+        dx (- cx from-x)
+        dy (- cy from-y)
+        len (math.sqrt (+ (* dx dx) (* dy dy)))]
+    (when (> len 0.001)
+      (let [strength (or power 2.6)]
+        (set e.knockback-vx (* (/ dx len) strength))
+        (set e.knockback-vy (* (/ dy len) strength))
+        (set e.knockback-timer SWORD-KNOCKBACK-DURATION)
+        ;; Petit stagger pour rendre l'impact lisible.
+        (set e.stun-timer (math.max e.stun-timer 3))))))
 
 (fn enemie.is-dead? [e]
   (<= e.hp 0))
