@@ -126,11 +126,13 @@
                      (= p.direction :left) 105
                      108) ;; fallback pour :up
         final-spr (+ base-spr (- p.anim-frame 1))]
-    (spr final-spr p.x p.y 15)))
+    (when (or (<= p.i-frames 0) (= (% (// p.i-frames 4) 2) 0))
+      (spr final-spr p.x p.y 15))))
 
 (fn player.take-damage [p dmg]
   (when (<= p.i-frames 0)
     (set p.hp (- p.hp dmg))
+    (set p.i-frames 30)
     (when (< p.hp 0)
       (set p.hp 0))))
 
