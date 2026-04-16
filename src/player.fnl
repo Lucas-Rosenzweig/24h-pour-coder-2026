@@ -288,14 +288,14 @@
     (line cx cy
           (+ cx (* r (math.cos cur-angle)))
           (+ cy (* r (math.sin cur-angle)))
-          12)
+          13)
     ;; Sillage : arc de a1 jusqu'à cur-angle
     (for [i 0 5]
       (let [t1 (+ a1 (* (/ i 6) swept))
             t2 (+ a1 (* (/ (+ i 1) 6) swept))]
         (line (+ cx (* r (math.cos t1))) (+ cy (* r (math.sin t1)))
               (+ cx (* r (math.cos t2))) (+ cy (* r (math.sin t2)))
-              12)))))
+              13)))))
 
 ;; Applique 1 hit de l'épée (appelé à la fin de chaque sweep)
 (fn player.do-sword-hit [p enemies enemie]

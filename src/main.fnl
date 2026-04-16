@@ -320,8 +320,8 @@
   (each [_ f (ipairs lightning-flashes)]
     (let [mx (+ (/ (+ f.x1 f.x2) 2) f.jx)
           my (+ (/ (+ f.y1 f.y2) 2) f.jy)]
-      (line f.x1 f.y1 mx my 12)
-      (line mx my f.x2 f.y2 12)))
+      (line f.x1 f.y1 mx my 9)
+      (line mx my f.x2 f.y2 9)))
   (when (world.is-shop?)
     (draw-shop-items))
   (player.draw-ui joueur)
