@@ -618,6 +618,7 @@
   (when (< (% menu-blink 60) 30)
     (print "Appuyez sur Z pour recommencer" 45 90 15)))
 
+(music 0)
 ;; Boucle principale
 (music 0)
 
