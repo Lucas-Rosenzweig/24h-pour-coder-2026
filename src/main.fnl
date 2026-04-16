@@ -23,11 +23,6 @@
 (var room-reward-spawned false)
 (var room-reward-required false)
 
-(table.insert enemies (enemie.new 50 50))
-(table.insert enemies (enemie.new 180 100))
-(table.insert enemies (enemie.new 180 90))
-(table.insert enemies (enemie.new 180 120))
-
 ;; Initialisation du joueur
 (local joueur (player.new))
 
