@@ -64,10 +64,10 @@
   (poke 0x3FC3  20) (poke 0x3FC4  12) (poke 0x3FC5  28) ;; ID 1
   (poke 0x3FC6 133) (poke 0x3FC7  76) (poke 0x3FC8  48) ;; ID 2
   (poke 0x3FC9 210) (poke 0x3FCA 125) (poke 0x3FCB  44) ;; ID 3
-  (poke 0x3FCC 133) (poke 0x3FCD  76) (poke 0x3FCE  48) ;; ID 4
-  (poke 0x3FCF  52) (poke 0x3FD0 101) (poke 0x3FD1  36) ;; ID 5
-  (poke 0x3FD2 208) (poke 0x3FD3  70) (poke 0x3FD4  72) ;; ID 6
-  (poke 0x3FD5 117) (poke 0x3FD6 113) (poke 0x3FD7  97) ;; ID 7
+  (poke 0x3FCC  41) (poke 0x3FCD 170) (poke 0x3FCE 254) ;; ID 4
+  (poke 0x3FCF  93) (poke 0x3FD0  81) (poke 0x3FD1  72) ;; ID 5
+  (poke 0x3FD2 252) (poke 0x3FD3 241) (poke 0x3FD4 236) ;; ID 6
+  (poke 0x3FD5 255) (poke 0x3FD6 202) (poke 0x3FD7 171) ;; ID 7
   (poke 0x3FD8  89) (poke 0x3FD9 125) (poke 0x3FDA 206) ;; ID 8
   (poke 0x3FDB 210) (poke 0x3FDC 125) (poke 0x3FDD  44) ;; ID 9
   (poke 0x3FDE 133) (poke 0x3FDF 149) (poke 0x3FE0 161) ;; ID A
@@ -196,6 +196,33 @@
       ;; BAS DROIT PLEIN
       (M.design-spr 43 "1111122211122000112200001200000012000000200000002000000020000000")
 
+  ;; JOUEUR
+    ;; IDLE
+      ;; 1
+      (M.design-spr 100 "F000000F055555500557777005747740F0777770F066560F07655570F066560F")
+      ;; 2
+      (M.design-spr 101 "FFFFFFFFF000000F055555500557777005747740F077777007655570F066560F")
+    ;; MARCHE-DROITE
+      ;; 1
+      (M.design-spr 102 "F000000F055555500557777005747740F07777700766560FF0655570F066500F")
+      ;; 2
+      (M.design-spr 103 "FFFFFFFFF000000F055555500557777005747740F0777770F065550FF066560F")
+      ;; 3
+      (M.design-spr 104 "F000000F055555500557777005747740F0777770F06656700765550FF006560F")
+    ;; MARCHE-GAUCHE
+      ;; 1
+      (M.design-spr 105 "F000000F0555555007777550047747500777770FF06566700755560FF005660F")
+      ;; 2
+      (M.design-spr 106 "FFFFFFFFF000000F0555555007777550047747500777770FF055560FF065660F")
+      ;; 3
+      (M.design-spr 107 "F000000F0555555007777550047747500777770F0765660FF0555670F065600F")
+    ;; MARCHE-DEVANT
+      ;; 1
+      (M.design-spr 108 "F000000F0555555005555550055555500755570FF06666700766660FF006660F")
+      ;; 2
+      (M.design-spr 109 "FFFFFFFFF000000F055555500555555005555550F075570FF066660FF066660F")
+      ;; 3
+      (M.design-spr 110 "F000000F055555500555555005555550F075557F0766660FF0666670F066660F")
   (math.randomseed (tstamp))
   (M.construire-map))
 
@@ -230,6 +257,6 @@
 (fn M.draw []
   (each [num-ligne ligne (ipairs map-v)]
     (each [num-col id (ipairs ligne)]
-      (spr id (* (- num-col 1) 8) (+ 16 (* (- num-ligne 1) 8)) 0))))
+      (spr id (* (- num-col 1) 8) (+ 16 (* (- num-ligne 1) 8)) 15))))
 
 M
